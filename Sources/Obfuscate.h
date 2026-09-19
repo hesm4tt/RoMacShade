@@ -76,3 +76,4 @@ public:
 #define MSDepthConverter           _0xMS_Dcnv_8b2f1
 #define MSFXFrameResources         _0xMS_FRes_3d5a8
 #define MSFXPreset                 _0xMS_Prst_1e4a7
+#define MSHardwareLock             _0xMS_HwLock_b7e12

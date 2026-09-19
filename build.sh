@@ -38,9 +38,9 @@ printf '%s' "$compiler_command" > "$command_stamp"
   -L build -lMacShade -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@loader_path \
   -framework AppKit -framework MetalKit -framework Metal -framework QuartzCore -framework UniformTypeIdentifiers \
   -o build/MacShadeDemo
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" -dynamiclib Sources/HostEntry.mm Sources/HostOverlay.mm Sources/Overlay.mm Sources/FXPreset.mm Sources/FXChain.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" -dynamiclib Sources/HostEntry.mm Sources/HardwareLock.mm Sources/HostOverlay.mm Sources/Overlay.mm Sources/FXPreset.mm Sources/FXChain.mm \
   -L build -lMacShade -Wl,-rpath,@loader_path \
-  -framework AppKit -framework Metal -framework QuartzCore -framework UniformTypeIdentifiers \
+  -framework AppKit -framework Metal -framework QuartzCore -framework UniformTypeIdentifiers -framework IOKit \
   -install_name @rpath/libMacShadeHost.dylib -o build/libMacShadeHost.dylib
 "$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Sources/HostProbe.mm \
   -framework Foundation -framework Security -o build/HostProbe
@@ -113,8 +113,8 @@ PLIST
 codesign --force --sign - build/MetalHostHarness.app
 
 # Build standalone MacShade launcher app
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Sources/AppMain.mm Sources/HostLauncher.mm \
-  -framework AppKit -framework UniformTypeIdentifiers -framework Security \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Sources/AppMain.mm Sources/HostLauncher.mm Sources/HardwareLock.mm \
+  -framework AppKit -framework UniformTypeIdentifiers -framework Security -framework IOKit \
   -o build/MacShade
 
 # Generate icon if missing

@@ -6,6 +6,7 @@
 
 #import "Obfuscate.h"
 #import "HostLauncher.h"
+#import "HardwareLock.h"
 #import <AppKit/AppKit.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #include <pwd.h>
@@ -55,6 +56,10 @@
 
 @interface MSLauncherWindowController : NSWindowController <NSWindowDelegate> {
     NSWindow *_window;
+    NSBox *_licenseBox;
+    NSTextField *_licenseKeyField;
+    NSButton *_copyHWIDBtn;
+    NSButton *_activateBtn;
     NSTextField *_statusLabel;
     NSTextField *_robloxPathLabel;
     NSButton *_launchButton;
@@ -70,7 +75,7 @@
 @implementation MSLauncherWindowController
 
 - (instancetype)init {
-    NSRect frame = NSMakeRect(0, 0, 540, 500);
+    NSRect frame = NSMakeRect(0, 0, 540, 580);
     NSWindow *window = [[NSWindow alloc] initWithContentRect:frame
         styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable
         backing:NSBackingStoreBuffered defer:NO];
@@ -83,6 +88,7 @@
         _window = window;
         _window.delegate = self;
         [self setupUI];
+        [self updateLicenseUI];
         [self detectRoblox];
     }
     return self;
@@ -93,7 +99,7 @@
     const CGFloat W = 540;
     
     // Logo Badge
-    MSLogoView *logo = [[MSLogoView alloc] initWithFrame:NSMakeRect((W - 56) * 0.5, 414, 56, 56)];
+    MSLogoView *logo = [[MSLogoView alloc] initWithFrame:NSMakeRect((W - 56) * 0.5, 494, 56, 56)];
     logo.wantsLayer = YES;
     logo.layer.shadowColor = [NSColor blackColor].CGColor;
     logo.layer.shadowOpacity = 0.5;
@@ -103,7 +109,7 @@
     
     // Title
     NSTextField *title = [NSTextField labelWithString:@"MacShade"];
-    title.frame = NSMakeRect(0, 376, W, 30);
+    title.frame = NSMakeRect(0, 456, W, 30);
     title.alignment = NSTextAlignmentCenter;
     title.font = [NSFont systemFontOfSize:22 weight:NSFontWeightBold];
     title.textColor = [NSColor whiteColor];
@@ -111,14 +117,21 @@
     
     // Subtitle / Version tag
     NSTextField *sub = [NSTextField labelWithString:@"v0.0.1  ·  ReShade & FX Shaders on macOS Metal"];
-    sub.frame = NSMakeRect(0, 354, W, 18);
+    sub.frame = NSMakeRect(0, 434, W, 18);
     sub.alignment = NSTextAlignmentCenter;
     sub.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
     sub.textColor = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:0.9];
     [content addSubview:sub];
     
+    // Hardware License Box
+    _licenseBox = [[NSBox alloc] initWithFrame:NSMakeRect(30, 346, W - 60, 74)];
+    _licenseBox.boxType = NSBoxCustom;
+    _licenseBox.cornerRadius = 10.0;
+    _licenseBox.borderWidth = 1.0;
+    [content addSubview:_licenseBox];
+    
     // Roblox Detection Box
-    NSBox *card = [[NSBox alloc] initWithFrame:NSMakeRect(30, 276, W - 60, 64)];
+    NSBox *card = [[NSBox alloc] initWithFrame:NSMakeRect(30, 270, W - 60, 64)];
     card.boxType = NSBoxCustom;
     card.fillColor = [NSColor colorWithWhite:1.0 alpha:0.05];
     card.borderColor = [NSColor colorWithWhite:1.0 alpha:0.12];
@@ -141,7 +154,7 @@
     
     // Launch Button
     _launchButton = [NSButton buttonWithTitle:@"Launch Roblox with MacShade" target:self action:@selector(launchAction:)];
-    _launchButton.frame = NSMakeRect((W - 320) * 0.5, 216, 320, 44);
+    _launchButton.frame = NSMakeRect((W - 320) * 0.5, 210, 320, 44);
     _launchButton.bezelStyle = NSBezelStyleRegularSquare;
     _launchButton.bordered = NO;
     _launchButton.wantsLayer = YES;
@@ -152,7 +165,7 @@
     [content addSubview:_launchButton];
     
     // Spinner
-    _spinner = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect((W - 20) * 0.5, 228, 20, 20)];
+    _spinner = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect((W - 20) * 0.5, 222, 20, 20)];
     _spinner.style = NSProgressIndicatorStyleSpinning;
     _spinner.controlSize = NSControlSizeSmall;
     _spinner.hidden = YES;
@@ -160,7 +173,7 @@
     
     // Status text
     _statusLabel = [NSTextField labelWithString:@"Ready. Press Command-E in-game to toggle effects."];
-    _statusLabel.frame = NSMakeRect(30, 188, W - 60, 20);
+    _statusLabel.frame = NSMakeRect(30, 182, W - 60, 20);
     _statusLabel.alignment = NSTextAlignmentCenter;
     _statusLabel.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
     _statusLabel.textColor = [NSColor colorWithWhite:0.65 alpha:1.0];
@@ -221,6 +234,104 @@
     });
 }
 
+- (void)updateLicenseUI {
+    BOOL licensed = [MSHardwareLock isLicensed];
+    NSString *hwid = [MSHardwareLock currentHWID];
+    const CGFloat W = 540;
+    const CGFloat boxW = W - 60;
+    
+    for (NSView *v in [_licenseBox.subviews copy]) {
+        [v removeFromSuperview];
+    }
+    
+    if (licensed) {
+        _licenseBox.frame = NSMakeRect(30, 356, boxW, 48);
+        _licenseBox.borderColor = [NSColor colorWithSRGBRed:0.2 green:0.75 blue:0.5 alpha:0.4];
+        _licenseBox.fillColor = [NSColor colorWithSRGBRed:0.1 green:0.3 blue:0.2 alpha:0.2];
+        
+        NSTextField *lbl = [NSTextField labelWithString:[NSString stringWithFormat:@"🟢  Hardware Locked to this Mac  ·  HWID: %@", hwid]];
+        lbl.frame = NSMakeRect(16, 12, boxW - 32, 22);
+        lbl.font = [NSFont systemFontOfSize:11.5 weight:NSFontWeightMedium];
+        lbl.textColor = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0];
+        [_licenseBox addSubview:lbl];
+        
+        _launchButton.enabled = YES;
+        _launchButton.layer.backgroundColor = [NSColor colorWithSRGBRed:0.15 green:0.62 blue:0.54 alpha:1.0].CGColor;
+        _statusLabel.stringValue = @"Ready. Press Command-E in-game to toggle effects.";
+        _statusLabel.textColor = [NSColor colorWithWhite:0.65 alpha:1.0];
+    } else {
+        _licenseBox.frame = NSMakeRect(30, 346, boxW, 74);
+        _licenseBox.borderColor = [NSColor colorWithSRGBRed:0.9 green:0.6 blue:0.2 alpha:0.45];
+        _licenseBox.fillColor = [NSColor colorWithSRGBRed:0.4 green:0.25 blue:0.1 alpha:0.2];
+        
+        NSTextField *hwidTitle = [NSTextField labelWithString:[NSString stringWithFormat:@"🟡  Activation Required  ·  HWID: %@", hwid]];
+        hwidTitle.frame = NSMakeRect(16, 42, boxW - 130, 20);
+        hwidTitle.font = [NSFont systemFontOfSize:11.5 weight:NSFontWeightSemibold];
+        hwidTitle.textColor = [NSColor colorWithSRGBRed:0.98 green:0.75 blue:0.3 alpha:1.0];
+        [_licenseBox addSubview:hwidTitle];
+        
+        _copyHWIDBtn = [NSButton buttonWithTitle:@"Copy HWID" target:self action:@selector(copyHWIDAction:)];
+        _copyHWIDBtn.frame = NSMakeRect(boxW - 16 - 95, 38, 95, 26);
+        _copyHWIDBtn.bezelStyle = NSBezelStyleRounded;
+        _copyHWIDBtn.font = [NSFont systemFontOfSize:10.5];
+        [_licenseBox addSubview:_copyHWIDBtn];
+        
+        _licenseKeyField = [NSTextField textFieldWithString:@""];
+        _licenseKeyField.placeholderString = @"Enter License Key (KEY-XXXX-XXXX-XXXX-XXXX)";
+        _licenseKeyField.frame = NSMakeRect(16, 10, boxW - 120, 24);
+        _licenseKeyField.font = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
+        [_licenseBox addSubview:_licenseKeyField];
+        
+        _activateBtn = [NSButton buttonWithTitle:@"Activate" target:self action:@selector(activateAction:)];
+        _activateBtn.frame = NSMakeRect(boxW - 16 - 85, 8, 85, 28);
+        _activateBtn.bezelStyle = NSBezelStyleRounded;
+        _activateBtn.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
+        [_licenseBox addSubview:_activateBtn];
+        
+        _launchButton.enabled = NO;
+        _launchButton.layer.backgroundColor = [NSColor colorWithWhite:0.2 alpha:1.0].CGColor;
+        _statusLabel.stringValue = @"Enter a valid license key for this Mac's HWID to unlock.";
+        _statusLabel.textColor = [NSColor colorWithSRGBRed:0.98 green:0.75 blue:0.3 alpha:1.0];
+    }
+}
+
+- (void)copyHWIDAction:(id)sender {
+    NSString *hwid = [MSHardwareLock currentHWID];
+    NSPasteboard *pb = [NSPasteboard generalPasteboard];
+    [pb clearContents];
+    [pb setString:hwid forType:NSPasteboardTypeString];
+    
+    if ([sender isKindOfClass:[NSButton class]]) {
+        NSButton *btn = (NSButton *)sender;
+        btn.title = @"Copied!";
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            btn.title = @"Copy HWID";
+        });
+    }
+    [self appendLog:[NSString stringWithFormat:@"Copied Hardware ID to clipboard: %@", hwid]];
+}
+
+- (void)activateAction:(id)sender {
+    (void)sender;
+    NSString *key = _licenseKeyField.stringValue;
+    NSError *error = nil;
+    BOOL ok = [MSHardwareLock activateWithKey:key error:&error];
+    if (ok) {
+        [self appendLog:@"✅ License activated successfully! This copy is now bound to this Mac."];
+        [self updateLicenseUI];
+        NSAlert *alert = [NSAlert new];
+        alert.messageText = @"MacShade Activated";
+        alert.informativeText = @"Your license has been verified and bound to this Mac's Hardware ID. Enjoy MacShade!";
+        [alert runModal];
+    } else {
+        [self appendLog:[NSString stringWithFormat:@"❌ Activation failed: %@", error.localizedDescription]];
+        NSAlert *alert = [NSAlert new];
+        alert.messageText = @"Activation Failed";
+        alert.informativeText = error.localizedDescription ?: @"The entered license key does not match this computer's Hardware ID.";
+        [alert runModal];
+    }
+}
+
 - (void)detectRoblox {
     NSString *detected = [MSHostLauncher detectRobloxApp];
     if (detected.length) {
@@ -252,6 +363,14 @@
 
 - (void)launchAction:(id)sender {
     (void)sender;
+    if (![MSHardwareLock isLicensed]) {
+        [self updateLicenseUI];
+        NSAlert *alert = [NSAlert new];
+        alert.messageText = @"Activation Required";
+        alert.informativeText = @"This copy of MacShade is locked to hardware. Please enter a valid license key for this Mac.";
+        [alert runModal];
+        return;
+    }
     if (_isLaunching) return;
     if (!_selectedRobloxPath.length || ![NSFileManager.defaultManager fileExistsAtPath:_selectedRobloxPath]) {
         [self detectRoblox];

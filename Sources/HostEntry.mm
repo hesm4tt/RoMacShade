@@ -8,6 +8,7 @@
 #import "MacShade.h"
 #import "FXRuntime.h"
 #import "HostOverlay.h"
+#import "HardwareLock.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -55,6 +56,16 @@ __attribute__((constructor)) static void startMacShadeHost(void) {
         unsetenv("MACSHADE_HOST_ENABLE");
         unsetenv("MACSHADE_HOST_CLEAR_CHILD_ENV");
     }
+    
+    // Enforce Hardware ID License Lock
+    if (![MSHardwareLock isLicensed]) {
+        fprintf(stderr, "MacShadeHost: unlicensed hardware or invalid license token. Aborting injection.\n");
+        unsetenv("DYLD_INSERT_LIBRARIES");
+        unsetenv("MACSHADE_HOST_ENABLE");
+        unsetenv("MACSHADE_HOST_CLEAR_CHILD_ENV");
+        return;
+    }
+    
     // A minimal loader marker also survives hosts that exit before a main runloop.
     fprintf(stderr, "MacShadeHost: library initializer entered (pid %d)\n", getpid());
     dispatch_async(dispatch_get_main_queue(), ^{
