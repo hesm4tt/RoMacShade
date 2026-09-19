@@ -9,6 +9,9 @@
 #import <CommonCrypto/CommonDigest.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <spawn.h>
+#include <fcntl.h>
+#include <dlfcn.h>
 
 @implementation MSHostLauncher
 
@@ -287,26 +290,64 @@
     env[OBFUSCATE("MACSHADE_HOST_RESOURCES")] = resourcesPath;
     env[OBFUSCATE("MACSHADE_HOST_REPORT")] = statusReport;
     
-    NSTask *runTask = [NSTask new];
-    runTask.launchPath = destExec;
-    runTask.currentDirectoryPath = [destExec stringByDeletingLastPathComponent];
-    runTask.environment = env;
-    
     [[NSFileManager defaultManager] createFileAtPath:logFile contents:[NSData data] attributes:nil];
-    NSFileHandle *logHandle = [NSFileHandle fileHandleForWritingAtPath:logFile];
-    if (logHandle) {
-        runTask.standardOutput = logHandle;
-        runTask.standardError = logHandle;
+
+    // Prepare environment array
+    NSMutableArray<NSData *> *envStorage = [NSMutableArray new];
+    char **envp = (char **)calloc(env.count + 1, sizeof(char *));
+    NSUInteger envIdx = 0;
+    for (NSString *k in env) {
+        NSString *line = [NSString stringWithFormat:@"%@=%@", k, env[k]];
+        NSData *d = [line dataUsingEncoding:NSUTF8StringEncoding];
+        [envStorage addObject:d];
+        envp[envIdx++] = (char *)d.bytes;
     }
-    
+    envp[envIdx] = NULL;
+
+    // Prepare argv array
+    char *argv[] = {
+        (char *)[destExec fileSystemRepresentation],
+        NULL
+    };
+
+    // Prepare file actions for stdout/stderr redirection and working directory
+    posix_spawn_file_actions_t fileActions;
+    posix_spawn_file_actions_init(&fileActions);
+    const char *logFilePath = [logFile fileSystemRepresentation];
+    posix_spawn_file_actions_addopen(&fileActions, STDOUT_FILENO, logFilePath, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    posix_spawn_file_actions_addopen(&fileActions, STDERR_FILENO, logFilePath, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    NSString *workingDir = [destExec stringByDeletingLastPathComponent];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    posix_spawn_file_actions_addchdir_np(&fileActions, workingDir.fileSystemRepresentation);
+#pragma clang diagnostic pop
+
+    // Prepare attributes with TCC responsibility disclaimed so Roblox runs under its own bundle identity
+    posix_spawnattr_t attr;
+    posix_spawnattr_init(&attr);
+    typedef int (*resp_disclaim_fn)(posix_spawnattr_t *, int);
+    resp_disclaim_fn disclaim_fn = (resp_disclaim_fn)dlsym(RTLD_DEFAULT, "responsibility_spawnattrs_setdisclaim");
+    if (disclaim_fn) {
+        disclaim_fn(&attr, 1);
+    }
+
     logHandler([NSString stringWithFormat:@"Injecting: %@", libraryPath.lastPathComponent]);
     logHandler([NSString stringWithFormat:@"Launching: %@", destApp.lastPathComponent]);
-    
-    if (![runTask launchAndReturnError:error]) {
+
+    pid_t pid = 0;
+    int spawnErr = posix_spawn(&pid, destExec.fileSystemRepresentation, &fileActions, &attr, argv, envp);
+
+    posix_spawnattr_destroy(&attr);
+    posix_spawn_file_actions_destroy(&fileActions);
+    free(envp);
+
+    if (spawnErr != 0) {
+        if (error) *error = [NSError errorWithDomain:NSPOSIXErrorDomain code:spawnErr userInfo:@{
+            NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Failed to spawn Roblox: %s (%d)", strerror(spawnErr), spawnErr]
+        }];
         return NO;
     }
-    
-    pid_t pid = runTask.processIdentifier;
+
     logHandler([NSString stringWithFormat:@"Process started with PID %d", (int)pid]);
     
     // Monitor for successful frame hook evaluation

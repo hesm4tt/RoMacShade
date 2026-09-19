@@ -156,12 +156,24 @@ cat > build/RoMacShade.app/Contents/Info.plist <<'PLIST'
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
+<key>NSMicrophoneUsageDescription</key><string>RoMacShade forwards microphone access to Roblox for in-game voice chat.</string>
+<key>NSCameraUsageDescription</key><string>RoMacShade forwards camera access to Roblox for avatar animation.</string>
 </dict></plist>
 PLIST
+
+cat > build/RoMacShade.entitlements <<'ENT'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>com.apple.security.device.audio-input</key><true/>
+<key>com.apple.security.device.camera</key><true/>
+</dict></plist>
+ENT
+
 codesign --force --sign - build/RoMacShade.app/Contents/Frameworks/libMacShade.dylib
 codesign --force --sign - build/RoMacShade.app/Contents/Frameworks/libMacShadeHost.dylib
 codesign --force --sign - build/RoMacShade.app/Contents/MacOS/MacShadeDemo
-codesign --force --sign - build/RoMacShade.app
+codesign --force --sign - --entitlements build/RoMacShade.entitlements build/RoMacShade.app
 
 # Keep compatibility alias
 ln -s RoMacShade.app build/MacShade.app
