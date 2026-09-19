@@ -381,18 +381,12 @@ void process(id<MTLCommandBuffer> buffer) {
             id<MTLTexture> targetTexture = drawable.texture;
             id<MTLTexture> scaledTexture = nil;
             if (isScaled) {
-                MTLTextureDescriptor *td = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:drawable.texture.pixelFormat
-                                                                                              width:effW
-                                                                                             height:effH
-                                                                                          mipmapped:NO];
-                td.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-                td.storageMode = MTLStorageModePrivate;
-                scaledTexture = [buffer.device newTextureWithDescriptor:td];
+                scaledTexture = MSAcquireScratchTexture(buffer.device, drawable.texture.pixelFormat, effW, effH, 1);
                 if (scaledTexture) {
+                    MSRecycleScratchTexture(scaledTexture, buffer);
                     MSScaleHelper *scaler = scaleHelperForDevice(buffer.device);
                     [scaler scaleCommandBuffer:buffer source:drawable.texture destination:scaledTexture];
                     targetTexture = scaledTexture;
-                    [buffer addCompletedHandler:^(id<MTLCommandBuffer>){ (void)scaledTexture; }];
                 }
             }
 

@@ -94,4 +94,8 @@ MACSHADE_API NSArray<MSFXEffect *> *MSGetFXEffects(void);
 /// Counts processed drawable frames once when every effect in a nonempty chain
 /// successfully encodes. It does not count individual effects or GPU completion.
 MACSHADE_API uint64_t MSProcessedFXFrameCount(void);
+/// Acquires a reusable Metal texture from the thread-safe scratch pool or creates one if empty.
+MACSHADE_API id<MTLTexture> _Nullable MSAcquireScratchTexture(id<MTLDevice> device, MTLPixelFormat format, NSUInteger width, NSUInteger height, NSUInteger levels);
+/// Recycles the scratch texture back to the pool once the command buffer completes on the GPU.
+MACSHADE_API void MSRecycleScratchTexture(id<MTLTexture> _Nullable texture, id<MTLCommandBuffer> _Nullable buffer);
 NS_ASSUME_NONNULL_END

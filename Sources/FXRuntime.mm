@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <set>
 #include <vector>
+#include <unordered_map>
 
 namespace {
 using namespace reshadefx;
@@ -152,6 +153,73 @@ id<MTLTexture> NewTexture(id<MTLDevice> device, MTLPixelFormat format, NSUIntege
     d.usage=MTLTextureUsageShaderRead|MTLTextureUsageRenderTarget|MTLTextureUsagePixelFormatView;
     return [device newTextureWithDescriptor:d];
 }
+
+struct ScratchPoolKey {
+    MTLPixelFormat format;
+    NSUInteger width;
+    NSUInteger height;
+    NSUInteger levels;
+    bool operator==(const ScratchPoolKey &o) const {
+        return format == o.format && width == o.width && height == o.height && levels == o.levels;
+    }
+};
+
+struct ScratchPoolKeyHash {
+    std::size_t operator()(const ScratchPoolKey &k) const {
+        std::size_t h = (std::size_t)k.format;
+        h ^= (k.width << 16) | (k.width >> 16);
+        h ^= (k.height << 8) | (k.height >> 24);
+        h ^= (k.levels << 28);
+        return h;
+    }
+};
+
+class ScratchTexturePool {
+    std::mutex _mutex;
+    std::unordered_map<ScratchPoolKey, std::vector<id<MTLTexture>>, ScratchPoolKeyHash> _idle;
+public:
+    static ScratchTexturePool &shared() {
+        static ScratchTexturePool instance;
+        return instance;
+    }
+    id<MTLTexture> acquire(id<MTLDevice> device, MTLPixelFormat format, NSUInteger w, NSUInteger h, NSUInteger levels = 1) {
+        if (!device || !w || !h) return nil;
+        ScratchPoolKey key{format, w, h, levels};
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+            auto it = _idle.find(key);
+            if (it != _idle.end() && !it->second.empty()) {
+                id<MTLTexture> tex = it->second.back();
+                it->second.pop_back();
+                return tex;
+            }
+        }
+        return NewTexture(device, format, w, h, levels);
+    }
+    void release(id<MTLTexture> tex, id<MTLCommandBuffer> buffer) {
+        if (!tex || !buffer) return;
+        ScratchPoolKey key{tex.pixelFormat, tex.width, tex.height, tex.mipmapLevelCount};
+        [buffer addCompletedHandler:^(id<MTLCommandBuffer>){
+            auto &pool = ScratchTexturePool::shared();
+            std::lock_guard<std::mutex> lock(pool._mutex);
+            auto &list = pool._idle[key];
+            if (list.size() < 16) {
+                list.push_back(tex);
+            }
+        }];
+    }
+};
+} // anonymous namespace
+
+id<MTLTexture> MSAcquireScratchTexture(id<MTLDevice> device, MTLPixelFormat format, NSUInteger width, NSUInteger height, NSUInteger levels) {
+    return ScratchTexturePool::shared().acquire(device, format, width, height, levels);
+}
+
+void MSRecycleScratchTexture(id<MTLTexture> texture, id<MTLCommandBuffer> buffer) {
+    ScratchTexturePool::shared().release(texture, buffer);
+}
+
+namespace {
 void Blit(id<MTLCommandBuffer> buffer,id<MTLTexture> from,id<MTLTexture> to) {
     auto blit=[buffer blitCommandEncoder];
     for(NSUInteger level=0;level<from.mipmapLevelCount;++level)
@@ -707,10 +775,13 @@ struct FXResourceState {
     auto finalPipeline=[self copyPipeline:target.pixelFormat error:error];if(!initialPipeline||!finalPipeline)return NO;
     NSMutableArray *held=[NSMutableArray arrayWithObjects:self,target,initialPipeline,finalPipeline,nil];
     if(depthTexture)[held addObject:depthTexture];
-    id<MTLTexture> backA=NewTexture(_device,MTLPixelFormatRGBA8Unorm,target.width,target.height);
-    id<MTLTexture> backB=NewTexture(_device,MTLPixelFormatRGBA8Unorm,target.width,target.height);
-    id<MTLTexture> input=NewTexture(_device,target.pixelFormat,target.width,target.height);
+    id<MTLTexture> backA=MSAcquireScratchTexture(_device,MTLPixelFormatRGBA8Unorm,target.width,target.height,1);
+    id<MTLTexture> backB=MSAcquireScratchTexture(_device,MTLPixelFormatRGBA8Unorm,target.width,target.height,1);
+    id<MTLTexture> input=MSAcquireScratchTexture(_device,target.pixelFormat,target.width,target.height,1);
     if(!backA||!backB||!input)return Fail(error,@"Could not allocate FX color buffers.");
+    MSRecycleScratchTexture(backA, buffer);
+    MSRecycleScratchTexture(backB, buffer);
+    MSRecycleScratchTexture(input, buffer);
     [held addObjectsFromArray:@[backA,backB,input]];
     auto inputView=[input newTextureViewWithPixelFormat:linear];if(!inputView)return Fail(error,@"Could not create the FX color view.");[held addObject:inputView];
     // Each recording buffer has a writable texture set. Techniques from one FX
@@ -756,7 +827,12 @@ struct FXResourceState {
     [held addObjectsFromArray:textures.allValues];
     [held addObjectsFromArray:frameResources.previous.allValues];
     id<MTLBuffer> constants=nil;
-    if(!uniformBytes.empty()) {constants=[_device newBufferWithBytes:uniformBytes.data() length:uniformBytes.size() options:MTLResourceStorageModeShared];if(!constants)return Fail(error,@"Could not allocate FX uniforms.");[held addObject:constants];}
+    const bool inlineUniforms = (!uniformBytes.empty() && uniformBytes.size() <= 4096);
+    if(!uniformBytes.empty() && !inlineUniforms) {
+        constants=[_device newBufferWithBytes:uniformBytes.data() length:uniformBytes.size() options:MTLResourceStorageModeShared];
+        if(!constants)return Fail(error,@"Could not allocate FX uniforms.");
+        [held addObject:constants];
+    }
     // Capture the container before adding per-pass views; the command buffer owns
     // this container through completion even when retainedReferences is disabled.
     [buffer addCompletedHandler:^(id<MTLCommandBuffer> completed){(void)completed;(void)held.count;}];
@@ -773,7 +849,7 @@ struct FXResourceState {
     const auto &technique=_program.module.techniques[selected];
     for(size_t index=0;index<technique.passes.size();++index) {
         const auto &pass=technique.passes[index];bool implicit=pass.render_target_names[0].empty();
-        if(implicit)Blit(buffer,backA,backB);
+        if(implicit && (pass.blend_enable[0] || !pass.clear_render_targets)) Blit(buffer,backA,backB);
         NSMutableArray<id<MTLTexture>> *outputs=[NSMutableArray array];
         auto *descriptor=[MTLRenderPassDescriptor renderPassDescriptor];
         for(unsigned i=0;i<8;++i) {
@@ -795,8 +871,9 @@ struct FXResourceState {
                 if(!t.semantic.empty())continue;
                 auto image=reads[S(t.unique_name)];
                 if([outputs indexOfObjectIdenticalTo:image]!=NSNotFound) {
-                    auto snapshot=NewTexture(_device,image.pixelFormat,image.width,image.height,image.mipmapLevelCount);
+                    auto snapshot=MSAcquireScratchTexture(_device,image.pixelFormat,image.width,image.height,image.mipmapLevelCount);
                     if(!snapshot)return Fail(error,@"Could not snapshot a pass read/write alias.");
+                    MSRecycleScratchTexture(snapshot, buffer);
                     [held addObject:snapshot];Blit(buffer,image,snapshot);reads[S(t.unique_name)]=snapshot;
                 }
             }
@@ -808,9 +885,14 @@ struct FXResourceState {
         [encoder setViewport:MTLViewport{0,0,double(pass.viewport_width?:first.width),double(pass.viewport_height?:first.height),0,1}];
         for(const std::string &entryName:{pass.vs_entry_point,pass.ps_entry_point}) {
             const auto &entry=_program.entryPoints.at(entryName);bool vertex=entry.stage==shader_type::vertex;
-            if(entry.uniformBufferSlot>=0&&constants) {
-                if(vertex)[encoder setVertexBuffer:constants offset:0 atIndex:entry.uniformBufferSlot];
-                else [encoder setFragmentBuffer:constants offset:0 atIndex:entry.uniformBufferSlot];
+            if(entry.uniformBufferSlot>=0&&!uniformBytes.empty()) {
+                if(inlineUniforms) {
+                    if(vertex)[encoder setVertexBytes:uniformBytes.data() length:uniformBytes.size() atIndex:entry.uniformBufferSlot];
+                    else [encoder setFragmentBytes:uniformBytes.data() length:uniformBytes.size() atIndex:entry.uniformBufferSlot];
+                } else if(constants) {
+                    if(vertex)[encoder setVertexBuffer:constants offset:0 atIndex:entry.uniformBufferSlot];
+                    else [encoder setFragmentBuffer:constants offset:0 atIndex:entry.uniformBufferSlot];
+                }
             }
             for(const auto &binding:entry.sampledBindings) {
                 const auto &t=_program.module.textures[binding.textureIndex];const auto &sampler=_program.module.samplers[binding.samplerIndex];
