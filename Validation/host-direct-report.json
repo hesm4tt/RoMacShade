@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "processedFrames": 475,
+  "depthStatus": "Depth captured \u00b7 1920 \u00d7 1280 \u00b7 forward input",
+  "counterMeaning": "processedFrames/fxFrames count encoding; completedFrames counts successful GPU completion of processed drawable frames.",
+  "hooksInstalled": true,
+  "libraryLoaded": true,
+  "error": "",
+  "hookDiagnostics": {
+    "acquiredDrawables": 475,
+    "committedBuffers": 475,
+    "renderTargetMatches": 475
+  },
+  "completedFrames": 474,
+  "timestamp": 1789779912.9624228,
+  "depthCaptures": 454,
+  "effectsEnabled": true,
+  "hostBundleIdentifier": "local.macshade.hostharness",
+  "fxFrames": 454,
+  "pid": 6817,
+  "gpuErrors": 0,
+  "overlay": "Effects compiled and active"
+}

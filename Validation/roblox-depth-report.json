@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "processedFrames": 15233,
+  "depthStatus": "No matching depth in this command buffer. This submission path is not supported yet.",
+  "counterMeaning": "processedFrames/fxFrames count encoding; completedFrames counts successful GPU completion of processed drawable frames.",
+  "hooksInstalled": true,
+  "libraryLoaded": true,
+  "error": "",
+  "hookDiagnostics": {
+    "acquiredDrawables": 15233,
+    "committedBuffers": 15608,
+    "renderTargetMatches": 15233
+  },
+  "completedFrames": 15232,
+  "timestamp": 1789780404.402045,
+  "depthCaptures": 12,
+  "effectsEnabled": true,
+  "hostBundleIdentifier": "com.roblox.RobloxPlayer",
+  "fxFrames": 0,
+  "pid": 7026,
+  "gpuErrors": 0,
+  "overlay": "Attached; processed=15168 FX=0 depth=12 enabled"
+}

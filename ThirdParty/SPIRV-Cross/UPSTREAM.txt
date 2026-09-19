@@ -1,0 +1,3 @@
+Source: https://github.com/KhronosGroup/SPIRV-Cross
+Commit: a9193e76134de63810ee1a57b5343f236d6ff102
+Only the compiler dependency files required by MacShade are included.

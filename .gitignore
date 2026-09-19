@@ -1,0 +1,20 @@
+# MacShade build artifacts
+build/
+*.dmg
+a.out
+*.o
+*.dylib
+*.dSYM/
+
+# Runtime logs and temporary files
+Logs/
+*.log
+*.macshade.json
+
+# macOS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes

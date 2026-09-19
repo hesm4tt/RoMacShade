@@ -1,0 +1,13 @@
+Vibrance.fx
+https://raw.githubusercontent.com/CeeJayDK/SweetFX/16d1a42247cb5baaf660120ee35c9a33bb94649c/Shaders/SweetFX/Vibrance.fx
+LumaSharpen.fx
+https://raw.githubusercontent.com/CeeJayDK/SweetFX/16d1a42247cb5baaf660120ee35c9a33bb94649c/Shaders/SweetFX/LumaSharpen.fx
+SweetFX-LICENSE
+https://raw.githubusercontent.com/CeeJayDK/SweetFX/16d1a42247cb5baaf660120ee35c9a33bb94649c/LICENSE
+ReShade.fxh
+https://raw.githubusercontent.com/crosire/reshade-shaders/6db142b4b1a05c764222e5b0bd9a644b7ccfe1dc/Shaders/ReShade.fxh
+ReShadeUI.fxh
+https://raw.githubusercontent.com/crosire/reshade-shaders/6db142b4b1a05c764222e5b0bd9a644b7ccfe1dc/Shaders/ReShadeUI.fxh
+Vibrance.fx and LumaSharpen.fx: MIT, copyright CeeJayDK, see SweetFX-LICENSE.
+ReShade.fxh and ReShadeUI.fxh: CC0-1.0 as declared in the original file headers.
+Downloaded unmodified from the pinned official author repositories for interoperability testing only.

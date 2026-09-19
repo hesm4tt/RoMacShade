@@ -1,0 +1,23 @@
+Source: https://github.com/crosire/reshade
+Commit: eeb2c76aea8e00200d88b479c9036c5ea4d06d5e
+Only the compiler dependency files required by MacShade are included.
+
+Local Apple portability patches (guarded by __APPLE__):
+
+- source/effect_symbol_table.cpp includes <alloca.h> on Apple platforms,
+  where alloca is declared, instead of the upstream <malloc.h> include.
+  Other platforms retain the original include.
+
+- source/effect_lexer.cpp includes <xlocale.h> and <cstdlib> on Apple
+  platforms. In the standard floating-literal parsing path, it copies the
+  token's character range into a terminated std::string and calls strtof_l
+  with a process-lifetime C numeric locale created by newlocale. This keeps
+  decimal parsing independent of the user's numeric locale while avoiding
+  Apple's floating-point std::from_chars availability requirement of
+  macOS 26, so MacShade can retain its macOS 12 deployment target.
+  The existing alternate parser branch and non-Apple std::from_chars path
+  remain in place.
+
+These are local modifications to the pinned compiler source, not changes
+claimed to be present in the upstream commit. Original source copyright
+notices and the BSD-3-Clause license are retained.

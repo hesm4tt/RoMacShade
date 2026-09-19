@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "processedFrames": 8723,
+  "depthStatus": "Waiting for a compatible scene depth buffer",
+  "counterMeaning": "processedFrames/fxFrames count encoding; completedFrames counts successful GPU completion of processed drawable frames.",
+  "hooksInstalled": true,
+  "libraryLoaded": true,
+  "error": "",
+  "hookDiagnostics": {
+    "acquiredDrawables": 8723,
+    "committedBuffers": 9033,
+    "renderTargetMatches": 8723
+  },
+  "completedFrames": 8722,
+  "timestamp": 1789780710.801173,
+  "depthCaptures": 0,
+  "effectsEnabled": true,
+  "hostBundleIdentifier": "com.roblox.RobloxPlayer",
+  "fxFrames": 8707,
+  "pid": 7237,
+  "gpuErrors": 0,
+  "overlay": "Attached; processed=8667 FX=8651 depth=0 enabled"
+}
