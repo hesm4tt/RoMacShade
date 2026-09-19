@@ -5,7 +5,8 @@ mkdir -p build
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
 CXX="$(xcrun --find clang++)"
 BASE=(-std=c++17 -O2 -mmacosx-version-min=12.0 -isysroot "$SDK" -I Sources -isystem ThirdParty/SPIRV-Cross -isystem ThirdParty/ReShadeFX/source)
-FLAGS=("${BASE[@]}" -fobjc-arc -fblocks -Wall -Wextra -Werror)
+FLAGS=("${BASE[@]}" -fobjc-arc -fblocks -Wall -Wextra -Werror -fvisibility=hidden -fvisibility-inlines-hidden)
+LDFLAGS=(-Wl,-dead_strip)
 # Set ARCHS="arm64 x86_64" to cross-build a universal library and executables.
 ARCH_FLAGS=()
 for arch in ${ARCHS:-$(uname -m)}; do ARCH_FLAGS+=(-arch "$arch"); done
@@ -30,38 +31,39 @@ for source in ThirdParty/ReShadeFX/source/*.cpp ThirdParty/SPIRV-Cross/*.cpp Sou
   fi
 done
 printf '%s' "$compiler_command" > "$command_stamp"
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" -dynamiclib Sources/MacShade.mm Sources/Hooks.mm Sources/FXRuntime.mm Sources/DepthCapture.mm "${COMPILER_OBJECTS[@]}" \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" -dynamiclib Sources/MacShade.mm Sources/Hooks.mm Sources/FXRuntime.mm Sources/DepthCapture.mm "${COMPILER_OBJECTS[@]}" \
   -framework Foundation -framework Metal -framework QuartzCore -framework CoreGraphics -framework ImageIO \
   -install_name @rpath/libMacShade.dylib -o build/libMacShade.dylib
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Sources/Demo.mm Sources/Overlay.mm Sources/FXPreset.mm Sources/FXChain.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Sources/Demo.mm Sources/Overlay.mm Sources/FXPreset.mm Sources/FXChain.mm \
   -L build -lMacShade -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@loader_path \
   -framework AppKit -framework MetalKit -framework Metal -framework QuartzCore -framework UniformTypeIdentifiers \
   -o build/MacShadeDemo
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" -dynamiclib Sources/HostEntry.mm Sources/HostOverlay.mm Sources/Overlay.mm Sources/FXPreset.mm Sources/FXChain.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" -dynamiclib Sources/HostEntry.mm Sources/HostOverlay.mm Sources/Overlay.mm Sources/FXPreset.mm Sources/FXChain.mm \
   -L build -lMacShade -Wl,-rpath,@loader_path \
   -framework AppKit -framework Metal -framework QuartzCore -framework UniformTypeIdentifiers \
   -install_name @rpath/libMacShadeHost.dylib -o build/libMacShadeHost.dylib
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Sources/HostProbe.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Sources/HostProbe.mm \
   -framework Foundation -framework Security -o build/HostProbe
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Tests/HostHarness.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Tests/HostHarness.mm \
   -framework AppKit -framework Metal -framework MetalKit -framework QuartzCore -o build/HostHarness
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Tests/RendererTests.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Tests/RendererTests.mm \
   -L build -lMacShade -Wl,-rpath,@loader_path \
   -framework Foundation -framework Metal -o build/RendererTests
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Tests/FXTests.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Tests/FXTests.mm \
   -L build -lMacShade -Wl,-rpath,@loader_path \
   -framework Foundation -framework Metal -o build/FXTests
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Sources/FXCheck.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Sources/FXCheck.mm \
   -L build -lMacShade -Wl,-rpath,@loader_path \
   -framework Foundation -framework Metal -o build/FXCheck
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Tests/PresetTests.mm Sources/FXPreset.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Tests/PresetTests.mm Sources/FXPreset.mm \
   -framework Foundation -o build/PresetTests
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Tests/ChainTests.mm Sources/FXPreset.mm Sources/FXChain.mm \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Tests/ChainTests.mm Sources/FXPreset.mm Sources/FXChain.mm \
   -L build -lMacShade -Wl,-rpath,@loader_path -framework Foundation -framework Metal -o build/ChainTests
 for test_source in Tests/DepthTests.mm Tests/DepthCaptureTests.mm; do
-  "$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "$test_source" \
+  "$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" "$test_source" \
     -L build -lMacShade -Wl,-rpath,@loader_path -framework Foundation -framework Metal -o "build/$(basename "${test_source%.mm}")"
 done
+rm -rf build/MacShadeDemo.app
 mkdir -p build/MacShadeDemo.app/Contents/{MacOS,Frameworks}
 cp build/MacShadeDemo build/MacShadeDemo.app/Contents/MacOS/
 cp build/libMacShade.dylib build/MacShadeDemo.app/Contents/Frameworks/
@@ -83,6 +85,12 @@ cat > build/MacShadeDemo.app/Contents/Info.plist <<'PLIST'
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 </dict></plist>
 PLIST
+# Strip demo binaries
+strip -x build/libMacShade.dylib
+strip -x build/libMacShadeHost.dylib
+strip -x build/MacShadeDemo.app/Contents/Frameworks/libMacShade.dylib
+strip -x build/MacShadeDemo.app/Contents/MacOS/MacShadeDemo
+
 codesign --force --sign - build/MacShadeDemo.app/Contents/Frameworks/libMacShade.dylib
 codesign --force --sign - build/MacShadeDemo.app
 codesign --force --sign - build/libMacShade.dylib
@@ -105,8 +113,8 @@ PLIST
 codesign --force --sign - build/MetalHostHarness.app
 
 # Build standalone MacShade launcher app
-"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" Sources/AppMain.mm \
-  -framework AppKit -framework UniformTypeIdentifiers \
+"$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Sources/AppMain.mm Sources/HostLauncher.mm \
+  -framework AppKit -framework UniformTypeIdentifiers -framework Security \
   -o build/MacShade
 
 # Generate icon if missing
@@ -114,6 +122,7 @@ if [[ ! -f build/AppIcon.icns ]]; then
   "$CXX" -std=c++17 -framework AppKit Tools/make_icon.mm -o /tmp/make_icon && /tmp/make_icon build/AppIcon.icns
 fi
 
+rm -rf build/MacShade.app
 mkdir -p build/MacShade.app/Contents/MacOS build/MacShade.app/Contents/Frameworks build/MacShade.app/Contents/Resources
 cp build/MacShade build/MacShade.app/Contents/MacOS/
 cp build/MacShadeDemo build/MacShade.app/Contents/MacOS/
@@ -122,7 +131,12 @@ cp build/AppIcon.icns build/MacShade.app/Contents/Resources/
 rm -rf build/MacShade.app/Contents/Resources/{Effects,Presets}
 ditto Effects build/MacShade.app/Contents/Resources/Effects
 ditto Presets build/MacShade.app/Contents/Resources/Presets
-cp Tools/roblox_host.py build/MacShade.app/Contents/Resources/
+
+# Strip all app binaries of local symbols
+strip -x build/MacShade.app/Contents/MacOS/MacShade
+strip -x build/MacShade.app/Contents/MacOS/MacShadeDemo
+strip -x build/MacShade.app/Contents/Frameworks/libMacShade.dylib
+strip -x build/MacShade.app/Contents/Frameworks/libMacShadeHost.dylib
 cat > build/MacShade.app/Contents/Info.plist <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

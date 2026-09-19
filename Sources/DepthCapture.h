@@ -1,12 +1,23 @@
+//
+// Copyright (c) 2026 MacShade Authors. All Rights Reserved.
+// PROPRIETARY AND CONFIDENTIAL.
+// UNAUTHORIZED COPYING, REVERSE ENGINEERING, REBRANDING, OR DISTRIBUTION IS STRICTLY PROHIBITED.
+//
+
 #pragma once
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
+#import "Obfuscate.h"
+
+#ifndef MACSHADE_CLASS_API
+#define MACSHADE_CLASS_API __attribute__((visibility("default")))
+#endif
 
 NS_ASSUME_NONNULL_BEGIN
 
 /// Copies and normalizes a finite-perspective Metal depth attachment for ReShade.
 /// This helper does not discover scene depth or infer the camera projection.
-@interface MSDepthConverter : NSObject
+MACSHADE_CLASS_API @interface MSDepthConverter : NSObject
 - (nullable instancetype)initWithDevice:(id<MTLDevice>)device
                                  error:(NSError * _Nullable * _Nullable)error;
 

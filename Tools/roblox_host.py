@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# Copyright (c) 2026 MacShade Authors. All Rights Reserved.
+# PROPRIETARY AND CONFIDENTIAL.
+# UNAUTHORIZED COPYING, REVERSE ENGINEERING, REBRANDING, OR DISTRIBUTION IS STRICTLY PROHIBITED.
+#
 """Prepare and launch an isolated Roblox copy with the MacShade Metal host library.
 
 No remote-thread injector, installed-app patch, global environment modification,

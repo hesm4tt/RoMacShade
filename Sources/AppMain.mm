@@ -1,3 +1,11 @@
+//
+// Copyright (c) 2026 MacShade Authors. All Rights Reserved.
+// PROPRIETARY AND CONFIDENTIAL.
+// UNAUTHORIZED COPYING, REVERSE ENGINEERING, REBRANDING, OR DISTRIBUTION IS STRICTLY PROHIBITED.
+//
+
+#import "Obfuscate.h"
+#import "HostLauncher.h"
 #import <AppKit/AppKit.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #include <pwd.h>
@@ -214,20 +222,15 @@
 }
 
 - (void)detectRoblox {
-    NSArray<NSString *> *candidates = @[
-        @"/Applications/Roblox.app",
-        [NSHomeDirectory() stringByAppendingPathComponent:@"Applications/Roblox.app"]
-    ];
-    for (NSString *path in candidates) {
-        if ([NSFileManager.defaultManager fileExistsAtPath:path]) {
-            _selectedRobloxPath = path;
-            _robloxPathLabel.stringValue = [NSString stringWithFormat:@"🟢  %@", path];
-            [self appendLog:[NSString stringWithFormat:@"Detected Roblox at %@", path]];
-            return;
-        }
+    NSString *detected = [MSHostLauncher detectRobloxApp];
+    if (detected.length) {
+        _selectedRobloxPath = detected;
+        _robloxPathLabel.stringValue = [NSString stringWithFormat:@"🟢  %@", detected];
+        [self appendLog:[NSString stringWithFormat:@"Detected Roblox at %@", detected]];
+    } else {
+        _robloxPathLabel.stringValue = @"🟡  Roblox not found in /Applications";
+        [self appendLog:@"Roblox not found at default location. Click 'Browse' to select Roblox.app."];
     }
-    _robloxPathLabel.stringValue = @"🟡  Roblox not found in /Applications";
-    [self appendLog:@"Roblox not found at default location. Click 'Browse' to select Roblox.app."];
 }
 
 - (void)browseRoblox:(id)sender {
@@ -273,59 +276,18 @@
     [self appendLog:[NSString stringWithFormat:@"Target: %@", _selectedRobloxPath]];
     
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-        // Find python script
-        NSString *scriptPath = nil;
-        NSString *resourcePath = [NSBundle.mainBundle resourcePath];
-        if (resourcePath) {
-            NSString *bundledScript = [resourcePath stringByAppendingPathComponent:@"roblox_host.py"];
-            if ([NSFileManager.defaultManager fileExistsAtPath:bundledScript]) scriptPath = bundledScript;
-        }
-        if (!scriptPath) {
-            // Source tree fallback
-            NSString *sourceScript = [[[[NSBundle.mainBundle bundlePath] stringByDeletingLastPathComponent]
-                stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"Tools/roblox_host.py"];
-            if ([NSFileManager.defaultManager fileExistsAtPath:sourceScript]) scriptPath = sourceScript;
-        }
-        if (!scriptPath) {
-            scriptPath = @"Tools/roblox_host.py";
-        }
-        
-        NSTask *task = [NSTask new];
-        task.launchPath = @"/usr/bin/python3";
-        task.arguments = @[scriptPath, @"run", @"--source", self->_selectedRobloxPath];
-        
-        NSPipe *pipe = [NSPipe pipe];
-        task.standardOutput = pipe;
-        task.standardError = pipe;
-        
-        NSFileHandle *readHandle = pipe.fileHandleForReading;
-        readHandle.readabilityHandler = ^(NSFileHandle *handle) {
-            NSData *data = [handle availableData];
-            if (data.length > 0) {
-                NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-                for (NSString *line in [str componentsSeparatedByString:@"\n"]) {
-                    if (line.length) [self appendLog:line];
-                }
-            }
-        };
-        
         NSError *launchError = nil;
-        BOOL launched = [task launchAndReturnError:&launchError];
-        if (!launched) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self finishLaunchWithSuccess:NO message:launchError.localizedDescription ?: @"Failed to launch host tool."];
-            });
-            return;
-        }
+        BOOL ok = [MSHostLauncher runRobloxWithSource:self->_selectedRobloxPath
+                                              library:nil
+                                            resources:nil
+                                           logHandler:^(NSString *line) {
+            [self appendLog:line];
+        } error:&launchError];
         
-        [task waitUntilExit];
-        readHandle.readabilityHandler = nil;
-        
-        BOOL ok = (task.terminationStatus == 0);
         dispatch_async(dispatch_get_main_queue(), ^{
             [self finishLaunchWithSuccess:ok message:ok ?
-                @"Roblox is running! Press Command-E in-game to toggle effects." :
-                [NSString stringWithFormat:@"Launch exited with code %d", task.terminationStatus]];
+                @"Roblox is running! Press Command-E or tap the 'M' button in-game to toggle effects." :
+                [NSString stringWithFormat:@"Launch failed: %@", launchError.localizedDescription ?: @"Unknown error"]];
         });
     });
 }

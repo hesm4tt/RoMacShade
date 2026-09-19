@@ -1,3 +1,10 @@
+//
+// Copyright (c) 2026 MacShade Authors. All Rights Reserved.
+// PROPRIETARY AND CONFIDENTIAL.
+// UNAUTHORIZED COPYING, REVERSE ENGINEERING, REBRANDING, OR DISTRIBUTION IS STRICTLY PROHIBITED.
+//
+
+#import "Obfuscate.h"
 #import "FXRuntime.h"
 #include "FXCompiler.hpp"
 #import <CoreGraphics/CoreGraphics.h>

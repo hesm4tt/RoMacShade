@@ -1,5 +1,12 @@
+//
+// Copyright (c) 2026 MacShade Authors. All Rights Reserved.
+// PROPRIETARY AND CONFIDENTIAL.
+// UNAUTHORIZED COPYING, REVERSE ENGINEERING, REBRANDING, OR DISTRIBUTION IS STRICTLY PROHIBITED.
+//
+
 #pragma once
 #import <AppKit/AppKit.h>
+#import "Obfuscate.h"
 #import "FXRuntime.h"
 
 NS_ASSUME_NONNULL_BEGIN

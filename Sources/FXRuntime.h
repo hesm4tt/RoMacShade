@@ -1,12 +1,30 @@
+//
+// Copyright (c) 2026 MacShade Authors. All Rights Reserved.
+// PROPRIETARY AND CONFIDENTIAL.
+// UNAUTHORIZED COPYING, REVERSE ENGINEERING, REBRANDING, OR DISTRIBUTION IS STRICTLY PROHIBITED.
+//
+
 #pragma once
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
+#ifndef MACSHADE_API
+#ifdef __cplusplus
+#define MACSHADE_API extern "C" __attribute__((visibility("default")))
+#else
+#define MACSHADE_API extern __attribute__((visibility("default")))
+#endif
+#endif
+
+#ifndef MACSHADE_CLASS_API
+#define MACSHADE_CLASS_API __attribute__((visibility("default")))
+#endif
+
 /// A raster ReShade FX effect compiled for a particular device and frame size.
 /// Loading compiles source and Metal pipelines synchronously. Keep instances for reuse.
-@interface MSFXEffect : NSObject
+MACSHADE_CLASS_API @interface MSFXEffect : NSObject
 - (nullable instancetype)initWithURL:(NSURL *)url
                              device:(id<MTLDevice>)device
                               width:(NSUInteger)width
@@ -66,14 +84,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Installs/replaces the effect used by the process-local Metal hooks.
 /// Passing nil removes the FX effect. Built-in color settings remain independent.
-FOUNDATION_EXPORT void MSSetFXEffect(MSFXEffect * _Nullable effect);
-FOUNDATION_EXPORT MSFXEffect * _Nullable MSGetFXEffect(void);
+MACSHADE_API void MSSetFXEffect(MSFXEffect * _Nullable effect);
+MACSHADE_API MSFXEffect * _Nullable MSGetFXEffect(void);
 /// Replaces the active effects in execution order. The host omits disabled
 /// effects. The array is copied; its effect objects remain independently editable.
-FOUNDATION_EXPORT void MSSetFXEffects(NSArray<MSFXEffect *> *effects);
+MACSHADE_API void MSSetFXEffects(NSArray<MSFXEffect *> *effects);
 /// Returns an immutable, ordered snapshot, or an empty array when none are installed.
-FOUNDATION_EXPORT NSArray<MSFXEffect *> *MSGetFXEffects(void);
+MACSHADE_API NSArray<MSFXEffect *> *MSGetFXEffects(void);
 /// Counts processed drawable frames once when every effect in a nonempty chain
 /// successfully encodes. It does not count individual effects or GPU completion.
-FOUNDATION_EXPORT uint64_t MSProcessedFXFrameCount(void);
+MACSHADE_API uint64_t MSProcessedFXFrameCount(void);
 NS_ASSUME_NONNULL_END
