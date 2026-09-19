@@ -24,6 +24,9 @@ mkdir -p "$STAGE_DIR"
 echo "Copying MacShade.app to stage..."
 ditto "build/MacShade.app" "$STAGE_DIR/MacShade.app"
 
+echo "Copying documentation to stage..."
+cp README.html "$STAGE_DIR/README.html"
+
 echo "Creating Applications symlink..."
 ln -s /Applications "$STAGE_DIR/Applications"
 

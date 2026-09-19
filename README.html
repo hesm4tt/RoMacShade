@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MacShade — ReShade & FX Post-Processing on macOS Metal</title>
+  <style>
+    :root {
+      --bg: #0c0e14;
+      --bg-gradient: radial-gradient(circle at 50% 0%, #172033 0%, #0c0e14 70%);
+      --card-bg: rgba(22, 27, 39, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover-border: rgba(84, 220, 194, 0.4);
+      --accent: #54dcc2;
+      --accent-glow: rgba(84, 220, 194, 0.25);
+      --accent-blue: #38bdf8;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --mono: "SF Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding: 2.5rem 1.5rem 4rem 1.5rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* Hero Header */
+    .hero {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #171d2b;
+      border: 2.5px solid var(--accent);
+      box-shadow: 0 0 24px var(--accent-glow);
+      margin-bottom: 1.25rem;
+      color: var(--accent);
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto 1.25rem auto;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+    }
+
+    .badge.accent {
+      background: rgba(84, 220, 194, 0.12);
+      border-color: rgba(84, 220, 194, 0.3);
+      color: var(--accent);
+    }
+
+    .badge.verified {
+      background: rgba(52, 211, 153, 0.12);
+      border-color: rgba(52, 211, 153, 0.3);
+      color: var(--success);
+    }
+
+    /* Security Callout Box */
+    .security-banner {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1.5px solid rgba(56, 189, 248, 0.4);
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .security-banner h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.25rem;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+    }
+
+    .security-banner p {
+      color: var(--text);
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
+
+    .security-banner .subtext {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+
+    .step-card {
+      background: rgba(14, 18, 26, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .step-card h3 {
+      font-size: 0.95rem;
+      color: var(--accent-blue);
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .step-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Sections */
+    section {
+      margin-bottom: 2.5rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      backdrop-filter: blur(16px);
+      transition: border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--card-hover-border);
+    }
+
+    /* Features Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .grid-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 1.2rem;
+    }
+
+    .grid-item h3 {
+      font-size: 1rem;
+      color: #ffffff;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .grid-item p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    /* Keyboard Shortcuts Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 1rem 0;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    th {
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td kbd {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 5px;
+      padding: 0.15rem 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: #ffffff;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+    }
+
+    /* Code Blocks */
+    pre, code {
+      font-family: var(--mono);
+    }
+
+    code {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      color: #cbd5e1;
+    }
+
+    pre {
+      background: #080a0f;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      margin: 0.75rem 0;
+    }
+
+    .footer {
+      text-align: center;
+      padding-top: 2rem;
+      border-top: 1px solid var(--card-border);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Hero Header -->
+  <header class="hero">
+    <div class="logo-badge">M</div>
+    <h1>MacShade</h1>
+    <p class="subtitle">Hardware-accelerated ReShade and FX post-processing shaders on macOS Metal for Roblox.</p>
+    <div class="tag-list">
+      <span class="badge accent">Version 0.0.1</span>
+      <span class="badge verified">✓ 100% Virus-Free & Clean</span>
+      <span class="badge">Apple Silicon & Intel</span>
+      <span class="badge">macOS 12.0+</span>
+    </div>
+  </header>
+
+  <!-- Security & Gatekeeper Banner -->
+  <div class="security-banner">
+    <h2>🛡️ Security & macOS Gatekeeper Notice ("Is MacShade a virus?")</h2>
+    <p><strong>MacShade is completely clean, safe, and contains zero malware, spyware, adware, or trackers.</strong></p>
+    <p class="subtext">
+      When downloading software outside the Mac App Store that is not signed with an Apple Developer Program subscription ($99/year), Apple's <strong>Gatekeeper</strong> displays a standard prompt on first launch: <em>"“MacShade” cannot be opened because Apple cannot check it for malicious software"</em>. This is standard macOS behavior for all independent community tools, <strong>not</strong> an indication of a virus.
+    </p>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <h3>Method 1: Right-Click (Easiest)</h3>
+        <p>1. Open your <strong>Applications</strong> folder in Finder.</p>
+        <p>2. <strong>Right-click (or Control-click)</strong> <code>MacShade.app</code> and choose <strong>Open</strong>.</p>
+        <p>3. In the dialog, click <strong>Open</strong>. macOS will remember your approval.</p>
+      </div>
+      <div class="step-card">
+        <h3>Method 2: System Settings</h3>
+        <p>1. Open <strong>System Settings</strong> &rarr; <strong>Privacy & Security</strong>.</p>
+        <p>2. Scroll down to the <strong>Security</strong> section.</p>
+        <p>3. Click <strong>Open Anyway</strong> next to the MacShade notice.</p>
+      </div>
+      <div class="step-card">
+        <h3>Method 3: Terminal</h3>
+        <p>If you prefer the command line, remove the quarantine attribute:</p>
+        <pre><code>xattr -cr /Applications/MacShade.app</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Start -->
+  <section>
+    <h2>🚀 Quick Start (Zero-Terminal Setup)</h2>
+    <div class="card">
+      <ol style="margin-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem;">
+        <li>Drag <strong><code>MacShade.app</code></strong> into your <strong><code>/Applications</code></strong> folder from the DMG.</li>
+        <li>Open <strong>MacShade</strong> from Applications (use Right-click &rarr; Open on first launch).</li>
+        <li>Click the prominent button: <strong>"Launch Roblox with MacShade"</strong>.</li>
+        <li>MacShade automatically prepares an isolated, sandboxed host copy and launches Roblox with Metal post-processing enabled.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- In-Game Controls -->
+  <section>
+    <h2>🎮 In-Game Controls & Features</h2>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Shortcut / Control</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Open / Close Overlay</strong></td>
+            <td><kbd>⌘ Command</kbd> + <kbd>E</kbd></td>
+            <td>Toggles the full shader configuration and preset inspector window.</td>
+          </tr>
+          <tr>
+            <td><strong>Floating 'M' Button</strong></td>
+            <td><strong>Click & Drag</strong></td>
+            <td>Sleek circular widget. Click to toggle overlay; drag anywhere across screen (auto-clamps to edges).</td>
+          </tr>
+          <tr>
+            <td><strong>Quick Comparison</strong></td>
+            <td><kbd>⌘ Command</kbd> + <kbd>B</kbd></td>
+            <td>Instantly bypasses/enables all effects to compare vanilla graphics with shaded graphics.</td>
+          </tr>
+          <tr>
+            <td><strong>Quality / Resolution Scaling</strong></td>
+            <td><strong>Quality Button</strong></td>
+            <td>Cycles between <strong>100% (FQ)</strong>, <strong>75%</strong>, and <strong>50%</strong> resolution scaling for huge FPS boosts.</td>
+          </tr>
+          <tr>
+            <td><strong>Reload Effects</strong></td>
+            <td><kbd>⌘ Command</kbd> + <kbd>R</kbd></td>
+            <td>Live re-compiles all active ReShade shaders from disk without restarting Roblox.</td>
+          </tr>
+          <tr>
+            <td><strong>Import Preset</strong></td>
+            <td><kbd>⌘ Command</kbd> + <kbd>⇧ Shift</kbd> + <kbd>O</kbd></td>
+            <td>Loads standard <code>.ini</code> ReShade presets (including all 17 Extravi presets).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Highlights Grid -->
+  <section>
+    <h2>✨ Key Architecture & Features</h2>
+    <div class="grid">
+      <div class="grid-item">
+        <h3>⚡ Real Metal Compilation</h3>
+        <p>Translates ReShade FX source directly to SPIR-V, converts to MSL (Metal Shading Language), and executes native Metal raster pipelines.</p>
+      </div>
+      <div class="grid-item">
+        <h3>🎨 17 Extravi Presets Included</h3>
+        <p>Full support for popular community presets including Clear Day, Soft Cinema, Extravi Cinema, Fantasy, Vibrant, and more.</p>
+      </div>
+      <div class="grid-item">
+        <h3>🔒 Safe Sandbox Isolation</h3>
+        <p>Leaves your installed official Roblox player completely untouched. Prepares an isolated copy in Application Support.</p>
+      </div>
+      <div class="grid-item">
+        <h3>🛡️ Hardened & Protected</h3>
+        <p>Proprietary native Objective-C/Metal host launcher, encrypted string literals, and Mach-O symbol mangling.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Troubleshooting -->
+  <section>
+    <h2>🔧 Troubleshooting & Logs</h2>
+    <div class="card">
+      <p>If you encounter issues or want to view diagnostic details:</p>
+      <ul style="margin-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+        <li><strong>Logs location</strong>: Click <strong>"Logs"</strong> in the MacShade launcher or view files in <code>~/Library/Logs/MacShade/</code>.</li>
+        <li><strong>Shaders folder</strong>: Click <strong>"Shaders"</strong> in the launcher to drop custom <code>.fx</code> shaders into <code>~/Documents/reshade roblox</code>.</li>
+        <li><strong>Presets folder</strong>: Click <strong>"Presets"</strong> to add community <code>.ini</code> presets.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>MacShade v0.0.1 &bull; Copyright &copy; 2026 MacShade Authors. All Rights Reserved.</p>
+    <p style="margin-top: 0.25rem;">Built with Apple Metal, SPIRV-Cross, and ReShadeFX.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>
