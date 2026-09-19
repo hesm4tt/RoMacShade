@@ -37,6 +37,28 @@ INSTALLATION:
 2. Open MacShade from your Applications folder.
 
 ============================================================
+macOS GATEKEEPER NOTICE (NOT A VIRUS):
+============================================================
+MacShade is 100% clean, safe, and contains NO malware.
+
+Because MacShade is an independent community project developed
+outside the Mac App Store without an Apple Developer ID
+subscription ($99/yr), macOS Gatekeeper displays a standard
+warning on first launch:
+"Apple cannot check it for malicious software" or
+"Cannot verify the developer".
+
+HOW TO OPEN (First time only):
+• Method 1 (Easiest):
+  Right-click (or Control-click) MacShade.app in your
+  Applications folder and select "Open", then click "Open".
+• Method 2:
+  Go to System Settings -> Privacy & Security -> Security,
+  and click "Open Anyway".
+• Method 3 (Terminal):
+  xattr -cr /Applications/MacShade.app
+
+============================================================
 USAGE:
 ============================================================
 • Click "Launch Roblox with MacShade" in the MacShade window.
