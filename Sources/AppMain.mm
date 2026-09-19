@@ -54,11 +54,28 @@
 }
 @end
 
+@interface MSLicenseCardView : NSView
+@end
+
+@implementation MSLicenseCardView
+- (instancetype)initWithFrame:(NSRect)frameRect {
+    if ((self = [super initWithFrame:frameRect])) {
+        self.wantsLayer = YES;
+        self.layer.cornerRadius = 10.0;
+        self.layer.borderWidth = 1.0;
+        self.layer.masksToBounds = YES;
+    }
+    return self;
+}
+@end
+
 @interface MSLauncherWindowController : NSWindowController <NSWindowDelegate> {
     NSWindow *_window;
-    NSBox *_licenseBox;
-    NSTextField *_licenseKeyField;
+    MSLicenseCardView *_licenseBox;
+    NSTextField *_licenseStatusHeader;
+    NSTextField *_hwidDisplayLabel;
     NSButton *_copyHWIDBtn;
+    NSTextField *_licenseKeyField;
     NSButton *_activateBtn;
     NSTextField *_statusLabel;
     NSTextField *_robloxPathLabel;
@@ -123,15 +140,50 @@
     sub.textColor = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:0.9];
     [content addSubview:sub];
     
-    // Hardware License Box
-    _licenseBox = [[NSBox alloc] initWithFrame:NSMakeRect(30, 346, W - 60, 74)];
-    _licenseBox.boxType = NSBoxCustom;
-    _licenseBox.cornerRadius = 10.0;
-    _licenseBox.borderWidth = 1.0;
+    // Hardware License Card
+    _licenseBox = [[MSLicenseCardView alloc] initWithFrame:NSMakeRect(30, 338, W - 60, 86)];
     [content addSubview:_licenseBox];
     
+    const CGFloat boxW = W - 60;
+    
+    // Status header inside card
+    _licenseStatusHeader = [NSTextField labelWithString:@""];
+    _licenseStatusHeader.frame = NSMakeRect(14, 58, boxW - 28, 20);
+    _licenseStatusHeader.font = [NSFont systemFontOfSize:11.5 weight:NSFontWeightSemibold];
+    [_licenseBox addSubview:_licenseStatusHeader];
+    
+    // HWID display label (selectable with mouse cursor)
+    _hwidDisplayLabel = [NSTextField labelWithString:@""];
+    _hwidDisplayLabel.frame = NSMakeRect(14, 32, boxW - 28 - 105, 22);
+    _hwidDisplayLabel.font = [NSFont monospacedSystemFontOfSize:11.5 weight:NSFontWeightSemibold];
+    _hwidDisplayLabel.selectable = YES;
+    [_licenseBox addSubview:_hwidDisplayLabel];
+    
+    // Copy HWID button
+    _copyHWIDBtn = [NSButton buttonWithTitle:@"Copy HWID" target:self action:@selector(copyHWIDAction:)];
+    _copyHWIDBtn.frame = NSMakeRect(boxW - 14 - 100, 30, 100, 26);
+    _copyHWIDBtn.bezelStyle = NSBezelStyleRounded;
+    _copyHWIDBtn.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
+    [_licenseBox addSubview:_copyHWIDBtn];
+    
+    // License Key textfield
+    _licenseKeyField = [NSTextField textFieldWithString:@""];
+    _licenseKeyField.frame = NSMakeRect(14, 8, boxW - 28 - 105, 22);
+    _licenseKeyField.placeholderString = @"Paste License Key (KEY-XXXX-XXXX-XXXX-XXXX)";
+    _licenseKeyField.font = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
+    _licenseKeyField.target = self;
+    _licenseKeyField.action = @selector(activateAction:);
+    [_licenseBox addSubview:_licenseKeyField];
+    
+    // Activate button
+    _activateBtn = [NSButton buttonWithTitle:@"Activate" target:self action:@selector(activateAction:)];
+    _activateBtn.frame = NSMakeRect(boxW - 14 - 100, 6, 100, 26);
+    _activateBtn.bezelStyle = NSBezelStyleRounded;
+    _activateBtn.font = [NSFont systemFontOfSize:11 weight:NSFontWeightSemibold];
+    [_licenseBox addSubview:_activateBtn];
+    
     // Roblox Detection Box
-    NSBox *card = [[NSBox alloc] initWithFrame:NSMakeRect(30, 270, W - 60, 64)];
+    NSBox *card = [[NSBox alloc] initWithFrame:NSMakeRect(30, 264, W - 60, 64)];
     card.boxType = NSBoxCustom;
     card.fillColor = [NSColor colorWithWhite:1.0 alpha:0.05];
     card.borderColor = [NSColor colorWithWhite:1.0 alpha:0.12];
@@ -237,60 +289,54 @@
 - (void)updateLicenseUI {
     BOOL licensed = [MSHardwareLock isLicensed];
     NSString *hwid = [MSHardwareLock currentHWID];
-    const CGFloat W = 540;
-    const CGFloat boxW = W - 60;
+    const CGFloat boxW = 540 - 60;
     
-    for (NSView *v in [_licenseBox.subviews copy]) {
-        [v removeFromSuperview];
-    }
+    _hwidDisplayLabel.stringValue = [NSString stringWithFormat:@"HWID: %@", hwid];
     
     if (licensed) {
-        _licenseBox.frame = NSMakeRect(30, 356, boxW, 48);
-        _licenseBox.borderColor = [NSColor colorWithSRGBRed:0.2 green:0.75 blue:0.5 alpha:0.4];
-        _licenseBox.fillColor = [NSColor colorWithSRGBRed:0.1 green:0.3 blue:0.2 alpha:0.2];
+        _licenseBox.layer.borderColor = [NSColor colorWithSRGBRed:0.2 green:0.75 blue:0.5 alpha:0.45].CGColor;
+        _licenseBox.layer.backgroundColor = [NSColor colorWithSRGBRed:0.08 green:0.24 blue:0.16 alpha:0.35].CGColor;
         
-        NSTextField *lbl = [NSTextField labelWithString:[NSString stringWithFormat:@"🟢  Hardware Locked to this Mac  ·  HWID: %@", hwid]];
-        lbl.frame = NSMakeRect(16, 12, boxW - 32, 22);
-        lbl.font = [NSFont systemFontOfSize:11.5 weight:NSFontWeightMedium];
-        lbl.textColor = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0];
-        [_licenseBox addSubview:lbl];
+        _licenseStatusHeader.stringValue = @"🟢  MacShade Activated  ·  Locked to this Mac";
+        _licenseStatusHeader.textColor = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0];
+        _licenseStatusHeader.frame = NSMakeRect(14, 48, boxW - 28, 22);
+        
+        _hwidDisplayLabel.textColor = [NSColor colorWithWhite:0.85 alpha:1.0];
+        _hwidDisplayLabel.frame = NSMakeRect(14, 18, boxW - 28 - 105, 22);
+        
+        _copyHWIDBtn.frame = NSMakeRect(boxW - 14 - 100, 16, 100, 26);
+        _copyHWIDBtn.hidden = NO;
+        
+        _licenseKeyField.hidden = YES;
+        _activateBtn.hidden = YES;
         
         _launchButton.enabled = YES;
         _launchButton.layer.backgroundColor = [NSColor colorWithSRGBRed:0.15 green:0.62 blue:0.54 alpha:1.0].CGColor;
         _statusLabel.stringValue = @"Ready. Press Command-E in-game to toggle effects.";
         _statusLabel.textColor = [NSColor colorWithWhite:0.65 alpha:1.0];
     } else {
-        _licenseBox.frame = NSMakeRect(30, 346, boxW, 74);
-        _licenseBox.borderColor = [NSColor colorWithSRGBRed:0.9 green:0.6 blue:0.2 alpha:0.45];
-        _licenseBox.fillColor = [NSColor colorWithSRGBRed:0.4 green:0.25 blue:0.1 alpha:0.2];
+        _licenseBox.layer.borderColor = [NSColor colorWithSRGBRed:0.95 green:0.65 blue:0.25 alpha:0.55].CGColor;
+        _licenseBox.layer.backgroundColor = [NSColor colorWithSRGBRed:0.32 green:0.18 blue:0.06 alpha:0.35].CGColor;
         
-        NSTextField *hwidTitle = [NSTextField labelWithString:[NSString stringWithFormat:@"🟡  Activation Required  ·  HWID: %@", hwid]];
-        hwidTitle.frame = NSMakeRect(16, 42, boxW - 130, 20);
-        hwidTitle.font = [NSFont systemFontOfSize:11.5 weight:NSFontWeightSemibold];
-        hwidTitle.textColor = [NSColor colorWithSRGBRed:0.98 green:0.75 blue:0.3 alpha:1.0];
-        [_licenseBox addSubview:hwidTitle];
+        _licenseStatusHeader.stringValue = @"🟡  Activation Required  ·  Locked to this Mac";
+        _licenseStatusHeader.textColor = [NSColor colorWithSRGBRed:0.98 green:0.75 blue:0.3 alpha:1.0];
+        _licenseStatusHeader.frame = NSMakeRect(14, 58, boxW - 28, 20);
         
-        _copyHWIDBtn = [NSButton buttonWithTitle:@"Copy HWID" target:self action:@selector(copyHWIDAction:)];
-        _copyHWIDBtn.frame = NSMakeRect(boxW - 16 - 95, 38, 95, 26);
-        _copyHWIDBtn.bezelStyle = NSBezelStyleRounded;
-        _copyHWIDBtn.font = [NSFont systemFontOfSize:10.5];
-        [_licenseBox addSubview:_copyHWIDBtn];
+        _hwidDisplayLabel.textColor = [NSColor colorWithSRGBRed:1.0 green:0.88 blue:0.55 alpha:1.0];
+        _hwidDisplayLabel.frame = NSMakeRect(14, 32, boxW - 28 - 105, 22);
         
-        _licenseKeyField = [NSTextField textFieldWithString:@""];
-        _licenseKeyField.placeholderString = @"Enter License Key (KEY-XXXX-XXXX-XXXX-XXXX)";
-        _licenseKeyField.frame = NSMakeRect(16, 10, boxW - 120, 24);
-        _licenseKeyField.font = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
-        [_licenseBox addSubview:_licenseKeyField];
+        _copyHWIDBtn.frame = NSMakeRect(boxW - 14 - 100, 30, 100, 26);
+        _copyHWIDBtn.hidden = NO;
         
-        _activateBtn = [NSButton buttonWithTitle:@"Activate" target:self action:@selector(activateAction:)];
-        _activateBtn.frame = NSMakeRect(boxW - 16 - 85, 8, 85, 28);
-        _activateBtn.bezelStyle = NSBezelStyleRounded;
-        _activateBtn.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
-        [_licenseBox addSubview:_activateBtn];
+        _licenseKeyField.frame = NSMakeRect(14, 8, boxW - 28 - 105, 22);
+        _licenseKeyField.hidden = NO;
+        
+        _activateBtn.frame = NSMakeRect(boxW - 14 - 100, 6, 100, 26);
+        _activateBtn.hidden = NO;
         
         _launchButton.enabled = NO;
         _launchButton.layer.backgroundColor = [NSColor colorWithWhite:0.2 alpha:1.0].CGColor;
-        _statusLabel.stringValue = @"Enter a valid license key for this Mac's HWID to unlock.";
+        _statusLabel.stringValue = @"Copy your HWID above and enter your license key to unlock.";
         _statusLabel.textColor = [NSColor colorWithSRGBRed:0.98 green:0.75 blue:0.3 alpha:1.0];
     }
 }
