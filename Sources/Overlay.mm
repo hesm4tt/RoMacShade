@@ -461,7 +461,7 @@ typedef NS_ENUM(NSInteger, MSOverlayDragZone) {
     _accent.layer.shadowOffset = CGSizeZero;
     [_canvas addSubview:_accent];
     
-    _brand = Text(@"MacShade", 22, NSFontWeightSemibold);
+    _brand = Text(@"RoMacShade", 22, NSFontWeightSemibold);
     [_canvas addSubview:_brand];
     _preset = Text(@"Untitled preset", 11);
     _preset.textColor = NSColor.secondaryLabelColor;

@@ -12,45 +12,55 @@
 #include <pwd.h>
 #include <unistd.h>
 
-@interface MSLogoView : NSView
+@interface MSLogoView : NSView {
+    NSImage *_logoImage;
+}
 @end
 
 @implementation MSLogoView
-- (BOOL)isFlipped { return YES; }
+- (instancetype)initWithFrame:(NSRect)frameRect {
+    if ((self = [super initWithFrame:frameRect])) {
+        self.wantsLayer = YES;
+        self.layer.cornerRadius = 14.0;
+        self.layer.masksToBounds = YES;
+        
+        NSString *resPath = [[NSBundle mainBundle] pathForResource:@"RoMacShadeLogo" ofType:@"png"];
+        if (!resPath) {
+            NSString *bundleDir = [[NSBundle mainBundle] bundlePath];
+            resPath = [[bundleDir stringByAppendingPathComponent:@"Contents/Resources"] stringByAppendingPathComponent:@"RoMacShadeLogo.png"];
+            if (![NSFileManager.defaultManager fileExistsAtPath:resPath]) {
+                resPath = [[bundleDir stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"Resources/RoMacShadeLogo.png"];
+            }
+        }
+        if (resPath && [NSFileManager.defaultManager fileExistsAtPath:resPath]) {
+            _logoImage = [[NSImage alloc] initWithContentsOfFile:resPath];
+        }
+    }
+    return self;
+}
+
 - (void)drawRect:(NSRect)dirtyRect {
     (void)dirtyRect;
     NSRect bounds = self.bounds;
-    NSRect circleRect = NSInsetRect(bounds, 2.0, 2.0);
-    NSBezierPath *circle = [NSBezierPath bezierPathWithOvalInRect:circleRect];
-    
-    // Frosted dark background
-    [[NSColor colorWithRed:0.09 green:0.11 blue:0.15 alpha:1.0] setFill];
-    [circle fill];
-    
-    // Vibrant cyan accent border
-    [[NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0] setStroke];
-    circle.lineWidth = 2.0;
-    [circle stroke];
-    
-    // Inner glow ring
-    NSBezierPath *inner = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(circleRect, 2.5, 2.5)];
-    [[NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:0.25] setStroke];
-    inner.lineWidth = 1.0;
-    [inner stroke];
-    
-    // Monogram 'M'
-    NSString *m = @"M";
-    NSDictionary *attrs = @{
-        NSFontAttributeName: [NSFont systemFontOfSize:24 weight:NSFontWeightBold],
-        NSForegroundColorAttributeName: [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0]
-    };
-    NSSize size = [m sizeWithAttributes:attrs];
-    NSRect tr = NSMakeRect(
-        bounds.origin.x + (bounds.size.width - size.width) * 0.5,
-        bounds.origin.y + (bounds.size.height - size.height) * 0.5 - 1.0,
-        size.width, size.height
-    );
-    [m drawInRect:tr withAttributes:attrs];
+    if (_logoImage) {
+        [_logoImage drawInRect:bounds fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1.0 respectFlipped:YES hints:nil];
+    } else {
+        NSBezierPath *clip = [NSBezierPath bezierPathWithRoundedRect:bounds xRadius:14 yRadius:14];
+        [[NSColor colorWithRed:0.09 green:0.11 blue:0.15 alpha:1.0] setFill];
+        [clip fill];
+        [[NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0] setStroke];
+        clip.lineWidth = 1.5;
+        [clip stroke];
+        
+        NSString *r = @"R";
+        NSDictionary *attrs = @{
+            NSFontAttributeName: [NSFont systemFontOfSize:26 weight:NSFontWeightBold],
+            NSForegroundColorAttributeName: [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0]
+        };
+        NSSize size = [r sizeWithAttributes:attrs];
+        NSRect tr = NSMakeRect((bounds.size.width - size.width) * 0.5, (bounds.size.height - size.height) * 0.5 - 1.0, size.width, size.height);
+        [r drawInRect:tr withAttributes:attrs];
+    }
 }
 @end
 
@@ -96,7 +106,7 @@
     NSWindow *window = [[NSWindow alloc] initWithContentRect:frame
         styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable
         backing:NSBackingStoreBuffered defer:NO];
-    window.title = @"MacShade";
+    window.title = @"RoMacShade";
     window.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
     window.backgroundColor = [NSColor colorWithRed:0.07 green:0.08 blue:0.11 alpha:1.0];
     [window center];
@@ -116,7 +126,7 @@
     const CGFloat W = 540;
     
     // Logo Badge
-    MSLogoView *logo = [[MSLogoView alloc] initWithFrame:NSMakeRect((W - 56) * 0.5, 494, 56, 56)];
+    MSLogoView *logo = [[MSLogoView alloc] initWithFrame:NSMakeRect((W - 64) * 0.5, 486, 64, 64)];
     logo.wantsLayer = YES;
     logo.layer.shadowColor = [NSColor blackColor].CGColor;
     logo.layer.shadowOpacity = 0.5;
@@ -125,18 +135,18 @@
     [content addSubview:logo];
     
     // Title
-    NSTextField *title = [NSTextField labelWithString:@"MacShade"];
-    title.frame = NSMakeRect(0, 456, W, 30);
+    NSTextField *title = [NSTextField labelWithString:@"RoMacShade"];
+    title.frame = NSMakeRect(0, 452, W, 30);
     title.alignment = NSTextAlignmentCenter;
     title.font = [NSFont systemFontOfSize:22 weight:NSFontWeightBold];
     title.textColor = [NSColor whiteColor];
     [content addSubview:title];
     
     // Subtitle / Version tag
-    NSTextField *sub = [NSTextField labelWithString:@"v0.0.1  ·  ReShade & FX Shaders on macOS Metal"];
-    sub.frame = NSMakeRect(0, 434, W, 18);
+    NSTextField *sub = [NSTextField labelWithString:@"v0.0.1  ·  Next-Gen Shaders & ReShade for Roblox on macOS Metal"];
+    sub.frame = NSMakeRect(0, 430, W, 18);
     sub.alignment = NSTextAlignmentCenter;
-    sub.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
+    sub.font = [NSFont systemFontOfSize:11.5 weight:NSFontWeightMedium];
     sub.textColor = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:0.9];
     [content addSubview:sub];
     
@@ -205,7 +215,7 @@
     [content addSubview:card];
     
     // Launch Button
-    _launchButton = [NSButton buttonWithTitle:@"Launch Roblox with MacShade" target:self action:@selector(launchAction:)];
+    _launchButton = [NSButton buttonWithTitle:@"Launch Roblox with RoMacShade" target:self action:@selector(launchAction:)];
     _launchButton.frame = NSMakeRect((W - 320) * 0.5, 210, 320, 44);
     _launchButton.bezelStyle = NSBezelStyleRegularSquare;
     _launchButton.bordered = NO;
@@ -297,7 +307,7 @@
         _licenseBox.layer.borderColor = [NSColor colorWithSRGBRed:0.2 green:0.75 blue:0.5 alpha:0.45].CGColor;
         _licenseBox.layer.backgroundColor = [NSColor colorWithSRGBRed:0.08 green:0.24 blue:0.16 alpha:0.35].CGColor;
         
-        _licenseStatusHeader.stringValue = @"🟢  MacShade Activated  ·  Locked to this Mac";
+        _licenseStatusHeader.stringValue = @"🟢  RoMacShade Activated  ·  Locked to this Mac";
         _licenseStatusHeader.textColor = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0];
         _licenseStatusHeader.frame = NSMakeRect(14, 48, boxW - 28, 22);
         
@@ -312,7 +322,7 @@
         
         _launchButton.enabled = YES;
         _launchButton.layer.backgroundColor = [NSColor colorWithSRGBRed:0.15 green:0.62 blue:0.54 alpha:1.0].CGColor;
-        _statusLabel.stringValue = @"Ready. Press Command-E in-game to toggle effects.";
+        _statusLabel.stringValue = @"Ready. Press Command-E or tap the 'R' button in-game to toggle effects.";
         _statusLabel.textColor = [NSColor colorWithWhite:0.65 alpha:1.0];
     } else {
         _licenseBox.layer.borderColor = [NSColor colorWithSRGBRed:0.95 green:0.65 blue:0.25 alpha:0.55].CGColor;
@@ -366,8 +376,8 @@
         [self appendLog:@"✅ License activated successfully! This copy is now bound to this Mac."];
         [self updateLicenseUI];
         NSAlert *alert = [NSAlert new];
-        alert.messageText = @"MacShade Activated";
-        alert.informativeText = @"Your license has been verified and bound to this Mac's Hardware ID. Enjoy MacShade!";
+        alert.messageText = @"RoMacShade Activated";
+        alert.informativeText = @"Your license has been verified and bound to this Mac's Hardware ID. Enjoy RoMacShade!";
         [alert runModal];
     } else {
         [self appendLog:[NSString stringWithFormat:@"❌ Activation failed: %@", error.localizedDescription]];
@@ -413,7 +423,7 @@
         [self updateLicenseUI];
         NSAlert *alert = [NSAlert new];
         alert.messageText = @"Activation Required";
-        alert.informativeText = @"This copy of MacShade is locked to hardware. Please enter a valid license key for this Mac.";
+        alert.informativeText = @"This copy of RoMacShade is locked to hardware. Please enter a valid license key for this Mac.";
         [alert runModal];
         return;
     }
@@ -437,7 +447,7 @@
     _statusLabel.stringValue = @"Preparing isolated host and injecting Metal hooks…";
     _statusLabel.textColor = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0];
     
-    [self appendLog:@"--- Starting MacShade Launch ---"];
+    [self appendLog:@"--- Starting RoMacShade Launch ---"];
     [self appendLog:[NSString stringWithFormat:@"Target: %@", _selectedRobloxPath]];
     
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
@@ -451,7 +461,7 @@
         
         dispatch_async(dispatch_get_main_queue(), ^{
             [self finishLaunchWithSuccess:ok message:ok ?
-                @"Roblox is running! Press Command-E or tap the 'M' button in-game to toggle effects." :
+                @"Roblox is running! Press Command-E or tap the 'R' button in-game to toggle effects." :
                 [NSString stringWithFormat:@"Launch failed: %@", launchError.localizedDescription ?: @"Unknown error"]];
         });
     });
@@ -460,7 +470,7 @@
 - (void)finishLaunchWithSuccess:(BOOL)success message:(NSString *)msg {
     _isLaunching = NO;
     _launchButton.enabled = YES;
-    _launchButton.title = @"Launch Roblox with MacShade";
+    _launchButton.title = @"Launch Roblox with RoMacShade";
     [_spinner stopAnimation:nil];
     _spinner.hidden = YES;
     _statusLabel.stringValue = msg;
@@ -536,13 +546,13 @@ int main(int argc, const char *argv[]) {
         [app setMainMenu:menubar];
         
         NSMenu *appMenu = [NSMenu new];
-        [appMenu addItemWithTitle:@"About MacShade" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
+        [appMenu addItemWithTitle:@"About RoMacShade" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
         [appMenu addItem:[NSMenuItem separatorItem]];
-        [appMenu addItemWithTitle:@"Hide MacShade" action:@selector(hide:) keyEquivalent:@"h"];
+        [appMenu addItemWithTitle:@"Hide RoMacShade" action:@selector(hide:) keyEquivalent:@"h"];
         [appMenu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
         [appMenu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
         [appMenu addItem:[NSMenuItem separatorItem]];
-        [appMenu addItemWithTitle:@"Quit MacShade" action:@selector(terminate:) keyEquivalent:@"q"];
+        [appMenu addItemWithTitle:@"Quit RoMacShade" action:@selector(terminate:) keyEquivalent:@"q"];
         [appMenuItem setSubmenu:appMenu];
         
         MSLauncherWindowController *controller = [[MSLauncherWindowController alloc] init];

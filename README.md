@@ -1,62 +1,62 @@
-# MacShade for macOS
+# <img src="Resources/RoMacShadeLogo.png" width="48" height="48" align="center" style="border-radius: 10px; margin-right: 8px;"> RoMacShade for macOS
 
-MacShade is a native Metal post-processing prototype with a dylib, an in-window effects overlay, an ordered ReShade FX chain, preset import/export, and a depth-input path. It compiles supported `.fx` shaders into Metal and runs their actual raster passes. **The host library and color effects have now run inside a separately launched, locally signed Roblox copy. Roblox depth matching remains unresolved, so qUINT SSR is not yet working in its tested avatar preview.** This is not a complete or pixel-identical port of MaxeysVisuals or ReShade.
+**RoMacShade** is a native Apple Silicon Metal post-processing shader & ReShade runtime engineered specifically for Roblox on macOS. It compiles supported `.fx` shaders into Metal compute and raster passes, features a draggable floating in-game HUD overlay, hardware ID node-locking, and zero-terminal 1-click launcher.
 
-## 🛡️ Security & macOS Gatekeeper Notice ("Is MacShade a virus?")
+## 🛡️ Security & macOS Gatekeeper Notice ("Is RoMacShade a virus?")
 
 > [!IMPORTANT]
-> **MacShade is 100% clean, safe, and contains zero viruses, malware, trojans, or spyware.**
+> **RoMacShade is 100% clean, safe, and contains zero viruses, malware, trojans, or spyware.**
 
 ### Why does macOS warn me before opening?
 When you download applications from the internet on macOS that are distributed independently (outside the Mac App Store) and without an Apple Developer ID subscription ($99/year), Apple's **Gatekeeper** will display a security dialog on first launch:
-> *"“MacShade” cannot be opened because Apple cannot check it for malicious software"* or *"macOS cannot verify the developer of “MacShade”"*.
+> *"“RoMacShade” cannot be opened because Apple cannot check it for malicious software"* or *"macOS cannot verify the developer of “RoMacShade”"*.
 
 This is standard macOS security behavior for any independently developed community software, **not** an indication of a virus or threat.
 
-### How to open MacShade on macOS (First time only):
-You only need to approve MacShade once using either of these quick methods:
+### How to open RoMacShade on macOS (First time only):
+You only need to approve RoMacShade once using either of these quick methods:
 
 - **Method 1 (Recommended — Right-Click Open)**:
   1. Open your **Applications** folder in Finder.
-  2. **Right-click (or Control-click)** `MacShade.app` and select **Open**.
+  2. **Right-click (or Control-click)** `RoMacShade.app` and select **Open**.
   3. A prompt will appear asking if you are sure. Click **Open**.
-  *(macOS remembers your permission, and you can open MacShade normally by double-clicking thereafter).*
+  *(macOS remembers your permission, and you can open RoMacShade normally by double-clicking thereafter).*
 
 - **Method 2 (System Settings)**:
   1. If macOS blocked opening, open **System Settings** &rarr; **Privacy & Security**.
   2. Scroll down to the **Security** section.
-  3. You will see: *"MacShade was blocked from use because it is not from an identified developer"*.
+  3. You will see: *"RoMacShade was blocked from use because it is not from an identified developer"*.
   4. Click **Open Anyway** and enter your password or Touch ID.
 
 - **Method 3 (Terminal)**:
   If you prefer Terminal, simply remove the quarantine attribute:
   ```sh
-  xattr -cr /Applications/MacShade.app
+  xattr -cr /Applications/RoMacShade.app
   ```
 
-### How MacShade Operates Safely:
-- **No modification to your installed Roblox**: MacShade prepares an isolated, sandboxed copy of Roblox in `~/Library/Application Support/MacShade/Hosts/`. Your original `/Applications/Roblox.app` remains completely pristine and unmodified.
-- **Purely Local Metal Graphics**: MacShade hooks directly into macOS Metal graphics queues solely to render post-processing shaders. It does not monitor keystrokes, read sensitive data, or transmit information over the network.
+### How RoMacShade Operates Safely:
+- **No modification to your installed Roblox**: RoMacShade prepares an isolated, sandboxed copy of Roblox in `~/Library/Application Support/MacShade/Hosts/`. Your original `/Applications/Roblox.app` remains completely pristine and unmodified.
+- **Purely Local Metal Graphics**: RoMacShade hooks directly into macOS Metal graphics queues solely to render post-processing shaders. It does not monitor keystrokes, read sensitive data, or transmit information over the network.
 
 ---
 
 ## Quick Start (Zero-Terminal Setup)
 
-1. Open `MacShade.app` from your **Applications** folder.
-2. Click **"Launch Roblox with MacShade"**.
+1. Open `RoMacShade.app` from your **Applications** folder.
+2. Click **"Launch Roblox with RoMacShade"**.
 3. Once in-game:
-   - Click the floating circular **'M'** button or press **⌘E** to toggle the effects overlay.
+   - Click the floating circular **'R'** button or press **⌘E** to toggle the effects overlay.
    - Press **⌘B** to quickly toggle all effects on/off for instant comparison.
-   - Drag the circular 'M' button anywhere on your screen.
+   - Drag the circular 'R' button anywhere on your screen to reposition it.
    - Use the **Quality** toggle in the overlay header (100% FQ &rarr; 75% &rarr; 50%) to optimize performance on any Mac.
 
 ---
 
 ## Run in Roblox (Command Line / Manual)
 
-Double-click **Launch Roblox with MacShade.command** or launch via `MacShade.app`. It prepares or reuses a version-specific copy under `~/Library/Application Support/MacShade/Hosts`, starts that copy with the host library, and checks for completed processed frames. The installed `/Applications/Roblox.app` and an already-running official instance remain intact. Allow the first copy operation to finish; logs and a live status JSON are written under `~/Library/Logs/MacShade`.
+Double-click **Launch Roblox with RoMacShade.command** or launch via `RoMacShade.app`. It prepares or reuses a version-specific copy under `~/Library/Application Support/MacShade/Hosts`, starts that copy with the host library, and checks for completed processed frames. The installed `/Applications/Roblox.app` and an already-running official instance remain intact. Allow the first copy operation to finish; logs and a live status JSON are written under `~/Library/Logs/MacShade`.
 
-In the new Roblox window, use the floating **'M'** button or **⌘E** to open the overlay. Choose effects, import an INI, or edit built-in grading. **⌘B** toggles processing for comparison. **Reversed depth input** is available while the controls are open. The host starts with neutral built-in grading. File dialogs are available through the overlay; the host integration adds only the two keyboard shortcuts and leaves Roblox's menu in place.
+In the new Roblox window, use the floating **'R'** button or **⌘E** to open the overlay. Choose effects, import an INI, or edit built-in grading. **⌘B** toggles processing for comparison. **Reversed depth input** is available while the controls are open. The host starts with neutral built-in grading. File dialogs are available through the overlay; the host integration adds only the two keyboard shortcuts and leaves Roblox's menu in place.
 
 To launch with a preset from Terminal:
 

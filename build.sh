@@ -112,39 +112,44 @@ cat > build/MetalHostHarness.app/Contents/Info.plist <<'PLIST'
 PLIST
 codesign --force --sign - build/MetalHostHarness.app
 
-# Build standalone MacShade launcher app
+# Build standalone RoMacShade launcher app
 "$CXX" "${FLAGS[@]}" "${ARCH_FLAGS[@]}" "${LDFLAGS[@]}" Sources/AppMain.mm Sources/HostLauncher.mm Sources/HardwareLock.mm \
   -framework AppKit -framework UniformTypeIdentifiers -framework Security -framework IOKit \
-  -o build/MacShade
+  -o build/RoMacShade
 
-# Generate icon if missing
-if [[ ! -f build/AppIcon.icns ]]; then
+# Copy or use compiled native icon
+if [[ -f Resources/AppIcon.icns ]]; then
+  cp Resources/AppIcon.icns build/AppIcon.icns
+elif [[ ! -f build/AppIcon.icns ]]; then
   "$CXX" -std=c++17 -framework AppKit Tools/make_icon.mm -o /tmp/make_icon && /tmp/make_icon build/AppIcon.icns
 fi
 
-rm -rf build/MacShade.app
-mkdir -p build/MacShade.app/Contents/MacOS build/MacShade.app/Contents/Frameworks build/MacShade.app/Contents/Resources
-cp build/MacShade build/MacShade.app/Contents/MacOS/
-cp build/MacShadeDemo build/MacShade.app/Contents/MacOS/
-cp build/libMacShade.dylib build/libMacShadeHost.dylib build/MacShade.app/Contents/Frameworks/
-cp build/AppIcon.icns build/MacShade.app/Contents/Resources/
-rm -rf build/MacShade.app/Contents/Resources/{Effects,Presets}
-ditto Effects build/MacShade.app/Contents/Resources/Effects
-ditto Presets build/MacShade.app/Contents/Resources/Presets
+rm -rf build/RoMacShade.app build/MacShade.app
+mkdir -p build/RoMacShade.app/Contents/MacOS build/RoMacShade.app/Contents/Frameworks build/RoMacShade.app/Contents/Resources
+cp build/RoMacShade build/RoMacShade.app/Contents/MacOS/
+cp build/MacShadeDemo build/RoMacShade.app/Contents/MacOS/
+cp build/libMacShade.dylib build/libMacShadeHost.dylib build/RoMacShade.app/Contents/Frameworks/
+cp build/AppIcon.icns build/RoMacShade.app/Contents/Resources/
+if [[ -f Resources/RoMacShadeLogo.png ]]; then
+  cp Resources/RoMacShadeLogo.png build/RoMacShade.app/Contents/Resources/
+fi
+rm -rf build/RoMacShade.app/Contents/Resources/{Effects,Presets}
+ditto Effects build/RoMacShade.app/Contents/Resources/Effects
+ditto Presets build/RoMacShade.app/Contents/Resources/Presets
 
 # Strip all app binaries of local symbols
-strip -x build/MacShade.app/Contents/MacOS/MacShade
-strip -x build/MacShade.app/Contents/MacOS/MacShadeDemo
-strip -x build/MacShade.app/Contents/Frameworks/libMacShade.dylib
-strip -x build/MacShade.app/Contents/Frameworks/libMacShadeHost.dylib
-cat > build/MacShade.app/Contents/Info.plist <<'PLIST'
+strip -x build/RoMacShade.app/Contents/MacOS/RoMacShade
+strip -x build/RoMacShade.app/Contents/MacOS/MacShadeDemo
+strip -x build/RoMacShade.app/Contents/Frameworks/libMacShade.dylib
+strip -x build/RoMacShade.app/Contents/Frameworks/libMacShadeHost.dylib
+cat > build/RoMacShade.app/Contents/Info.plist <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleExecutable</key><string>MacShade</string>
-<key>CFBundleIdentifier</key><string>local.macshade.app</string>
-<key>CFBundleName</key><string>MacShade</string>
-<key>CFBundleDisplayName</key><string>MacShade</string>
+<key>CFBundleExecutable</key><string>RoMacShade</string>
+<key>CFBundleIdentifier</key><string>local.romacshade.app</string>
+<key>CFBundleName</key><string>RoMacShade</string>
+<key>CFBundleDisplayName</key><string>RoMacShade</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundleVersion</key><string>1</string>
 <key>CFBundleShortVersionString</key><string>0.0.1</string>
@@ -153,12 +158,15 @@ cat > build/MacShade.app/Contents/Info.plist <<'PLIST'
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 </dict></plist>
 PLIST
-codesign --force --sign - build/MacShade.app/Contents/Frameworks/libMacShade.dylib
-codesign --force --sign - build/MacShade.app/Contents/Frameworks/libMacShadeHost.dylib
-codesign --force --sign - build/MacShade.app/Contents/MacOS/MacShadeDemo
-codesign --force --sign - build/MacShade.app
+codesign --force --sign - build/RoMacShade.app/Contents/Frameworks/libMacShade.dylib
+codesign --force --sign - build/RoMacShade.app/Contents/Frameworks/libMacShadeHost.dylib
+codesign --force --sign - build/RoMacShade.app/Contents/MacOS/MacShadeDemo
+codesign --force --sign - build/RoMacShade.app
+
+# Keep compatibility alias
+ln -s RoMacShade.app build/MacShade.app
 
 # Build DMG installer
 ./Tools/build_dmg.sh
 
-printf 'Built Metal runtime, host overlay library, host tools, MacShade.app, and MacShade-v0.0.1.dmg\n'
+printf 'Built Metal runtime, host overlay library, host tools, RoMacShade.app, and RoMacShade-v0.0.1.dmg\n'

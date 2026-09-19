@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MacShade — ReShade & FX Post-Processing on macOS Metal</title>
+  <title>RoMacShade — ReShade & FX Post-Processing on macOS Metal</title>
   <style>
     :root {
       --bg: #0c0e14;
@@ -54,20 +54,14 @@
     }
 
     .logo-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: #171d2b;
-      border: 2.5px solid var(--accent);
-      box-shadow: 0 0 24px var(--accent-glow);
+      display: inline-block;
+      width: 84px;
+      height: 84px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
       margin-bottom: 1.25rem;
-      color: var(--accent);
-      font-size: 34px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
     }
 
     h1 {
@@ -318,153 +312,155 @@
 <body>
 
 <div class="container">
+ 
+   <!-- Hero Header -->
+   <header class="hero">
+     <div class="logo-badge">
+       <img src="Resources/RoMacShadeLogo.png" alt="RoMacShade Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+     </div>
+     <h1>RoMacShade</h1>
+     <p class="subtitle">Hardware-accelerated ReShade and FX post-processing shaders on macOS Metal for Roblox.</p>
+     <div class="tag-list">
+       <span class="badge accent">Version 0.0.1</span>
+       <span class="badge verified">✓ 100% Virus-Free & Clean</span>
+       <span class="badge">Apple Silicon & Intel</span>
+       <span class="badge">macOS 12.0+</span>
+     </div>
+   </header>
 
-  <!-- Hero Header -->
-  <header class="hero">
-    <div class="logo-badge">M</div>
-    <h1>MacShade</h1>
-    <p class="subtitle">Hardware-accelerated ReShade and FX post-processing shaders on macOS Metal for Roblox.</p>
-    <div class="tag-list">
-      <span class="badge accent">Version 0.0.1</span>
-      <span class="badge verified">✓ 100% Virus-Free & Clean</span>
-      <span class="badge">Apple Silicon & Intel</span>
-      <span class="badge">macOS 12.0+</span>
-    </div>
-  </header>
+   <!-- Security & Gatekeeper Banner -->
+   <div class="security-banner">
+     <h2>🛡️ Security & macOS Gatekeeper Notice ("Is RoMacShade a virus?")</h2>
+     <p><strong>RoMacShade is completely clean, safe, and contains zero malware, spyware, adware, or trackers.</strong></p>
+     <p class="subtext">
+       When downloading software outside the Mac App Store that is not signed with an Apple Developer Program subscription ($99/year), Apple's <strong>Gatekeeper</strong> displays a standard prompt on first launch: <em>"“RoMacShade” cannot be opened because Apple cannot check it for malicious software"</em>. This is standard macOS behavior for all independent community tools, <strong>not</strong> an indication of a virus.
+     </p>
 
-  <!-- Security & Gatekeeper Banner -->
-  <div class="security-banner">
-    <h2>🛡️ Security & macOS Gatekeeper Notice ("Is MacShade a virus?")</h2>
-    <p><strong>MacShade is completely clean, safe, and contains zero malware, spyware, adware, or trackers.</strong></p>
-    <p class="subtext">
-      When downloading software outside the Mac App Store that is not signed with an Apple Developer Program subscription ($99/year), Apple's <strong>Gatekeeper</strong> displays a standard prompt on first launch: <em>"“MacShade” cannot be opened because Apple cannot check it for malicious software"</em>. This is standard macOS behavior for all independent community tools, <strong>not</strong> an indication of a virus.
-    </p>
+     <div class="steps-grid">
+       <div class="step-card">
+         <h3>Method 1: Right-Click (Easiest)</h3>
+         <p>1. Open your <strong>Applications</strong> folder in Finder.</p>
+         <p>2. <strong>Right-click (or Control-click)</strong> <code>RoMacShade.app</code> and choose <strong>Open</strong>.</p>
+         <p>3. In the dialog, click <strong>Open</strong>. macOS will remember your approval.</p>
+       </div>
+       <div class="step-card">
+         <h3>Method 2: System Settings</h3>
+         <p>1. Open <strong>System Settings</strong> &rarr; <strong>Privacy & Security</strong>.</p>
+         <p>2. Scroll down to the <strong>Security</strong> section.</p>
+         <p>3. Click <strong>Open Anyway</strong> next to the RoMacShade notice.</p>
+       </div>
+       <div class="step-card">
+         <h3>Method 3: Terminal</h3>
+         <p>If you prefer the command line, remove the quarantine attribute:</p>
+         <pre><code>xattr -cr /Applications/RoMacShade.app</code></pre>
+       </div>
+     </div>
+   </div>
 
-    <div class="steps-grid">
-      <div class="step-card">
-        <h3>Method 1: Right-Click (Easiest)</h3>
-        <p>1. Open your <strong>Applications</strong> folder in Finder.</p>
-        <p>2. <strong>Right-click (or Control-click)</strong> <code>MacShade.app</code> and choose <strong>Open</strong>.</p>
-        <p>3. In the dialog, click <strong>Open</strong>. macOS will remember your approval.</p>
-      </div>
-      <div class="step-card">
-        <h3>Method 2: System Settings</h3>
-        <p>1. Open <strong>System Settings</strong> &rarr; <strong>Privacy & Security</strong>.</p>
-        <p>2. Scroll down to the <strong>Security</strong> section.</p>
-        <p>3. Click <strong>Open Anyway</strong> next to the MacShade notice.</p>
-      </div>
-      <div class="step-card">
-        <h3>Method 3: Terminal</h3>
-        <p>If you prefer the command line, remove the quarantine attribute:</p>
-        <pre><code>xattr -cr /Applications/MacShade.app</code></pre>
-      </div>
-    </div>
-  </div>
+   <!-- Quick Start -->
+   <section>
+     <h2>🚀 Quick Start (Zero-Terminal Setup)</h2>
+     <div class="card">
+       <ol style="margin-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem;">
+         <li>Drag <strong><code>RoMacShade.app</code></strong> into your <strong><code>/Applications</code></strong> folder from the DMG.</li>
+         <li>Open <strong>RoMacShade</strong> from Applications (use Right-click &rarr; Open on first launch).</li>
+         <li>Click the prominent button: <strong>"Launch Roblox with RoMacShade"</strong>.</li>
+         <li>RoMacShade automatically prepares an isolated, sandboxed host copy and launches Roblox with Metal post-processing enabled.</li>
+       </ol>
+     </div>
+   </section>
 
-  <!-- Quick Start -->
-  <section>
-    <h2>🚀 Quick Start (Zero-Terminal Setup)</h2>
-    <div class="card">
-      <ol style="margin-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem;">
-        <li>Drag <strong><code>MacShade.app</code></strong> into your <strong><code>/Applications</code></strong> folder from the DMG.</li>
-        <li>Open <strong>MacShade</strong> from Applications (use Right-click &rarr; Open on first launch).</li>
-        <li>Click the prominent button: <strong>"Launch Roblox with MacShade"</strong>.</li>
-        <li>MacShade automatically prepares an isolated, sandboxed host copy and launches Roblox with Metal post-processing enabled.</li>
-      </ol>
-    </div>
-  </section>
+   <!-- In-Game Controls -->
+   <section>
+     <h2>🎮 In-Game Controls & Features</h2>
+     <div class="card">
+       <table>
+         <thead>
+           <tr>
+             <th>Action</th>
+             <th>Shortcut / Control</th>
+             <th>Description</th>
+           </tr>
+         </thead>
+         <tbody>
+           <tr>
+             <td><strong>Open / Close Overlay</strong></td>
+             <td><kbd>⌘ Command</kbd> + <kbd>E</kbd></td>
+             <td>Toggles the full shader configuration and preset inspector window.</td>
+           </tr>
+           <tr>
+             <td><strong>Floating 'R' Button</strong></td>
+             <td><strong>Click & Drag</strong></td>
+             <td>Sleek circular widget with RoMacShade emblem. Click to toggle overlay; drag anywhere across screen (auto-clamps to edges).</td>
+           </tr>
+           <tr>
+             <td><strong>Quick Comparison</strong></td>
+             <td><kbd>⌘ Command</kbd> + <kbd>B</kbd></td>
+             <td>Instantly bypasses/enables all effects to compare vanilla graphics with shaded graphics.</td>
+           </tr>
+           <tr>
+             <td><strong>Quality / Resolution Scaling</strong></td>
+             <td><strong>Quality Button</strong></td>
+             <td>Cycles between <strong>100% (FQ)</strong>, <strong>75%</strong>, and <strong>50%</strong> resolution scaling for huge FPS boosts.</td>
+           </tr>
+           <tr>
+             <td><strong>Reload Effects</strong></td>
+             <td><kbd>⌘ Command</kbd> + <kbd>R</kbd></td>
+             <td>Live re-compiles all active ReShade shaders from disk without restarting Roblox.</td>
+           </tr>
+           <tr>
+             <td><strong>Import Preset</strong></td>
+             <td><kbd>⌘ Command</kbd> + <kbd>⇧ Shift</kbd> + <kbd>O</kbd></td>
+             <td>Loads standard <code>.ini</code> ReShade presets (including all 17 Extravi presets).</td>
+           </tr>
+         </tbody>
+       </table>
+     </div>
+   </section>
 
-  <!-- In-Game Controls -->
-  <section>
-    <h2>🎮 In-Game Controls & Features</h2>
-    <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Action</th>
-            <th>Shortcut / Control</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Open / Close Overlay</strong></td>
-            <td><kbd>⌘ Command</kbd> + <kbd>E</kbd></td>
-            <td>Toggles the full shader configuration and preset inspector window.</td>
-          </tr>
-          <tr>
-            <td><strong>Floating 'M' Button</strong></td>
-            <td><strong>Click & Drag</strong></td>
-            <td>Sleek circular widget. Click to toggle overlay; drag anywhere across screen (auto-clamps to edges).</td>
-          </tr>
-          <tr>
-            <td><strong>Quick Comparison</strong></td>
-            <td><kbd>⌘ Command</kbd> + <kbd>B</kbd></td>
-            <td>Instantly bypasses/enables all effects to compare vanilla graphics with shaded graphics.</td>
-          </tr>
-          <tr>
-            <td><strong>Quality / Resolution Scaling</strong></td>
-            <td><strong>Quality Button</strong></td>
-            <td>Cycles between <strong>100% (FQ)</strong>, <strong>75%</strong>, and <strong>50%</strong> resolution scaling for huge FPS boosts.</td>
-          </tr>
-          <tr>
-            <td><strong>Reload Effects</strong></td>
-            <td><kbd>⌘ Command</kbd> + <kbd>R</kbd></td>
-            <td>Live re-compiles all active ReShade shaders from disk without restarting Roblox.</td>
-          </tr>
-          <tr>
-            <td><strong>Import Preset</strong></td>
-            <td><kbd>⌘ Command</kbd> + <kbd>⇧ Shift</kbd> + <kbd>O</kbd></td>
-            <td>Loads standard <code>.ini</code> ReShade presets (including all 17 Extravi presets).</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+   <!-- Highlights Grid -->
+   <section>
+     <h2>✨ Key Architecture & Features</h2>
+     <div class="grid">
+       <div class="grid-item">
+         <h3>⚡ Real Metal Compilation</h3>
+         <p>Translates ReShade FX source directly to SPIR-V, converts to MSL (Metal Shading Language), and executes native Metal raster pipelines.</p>
+       </div>
+       <div class="grid-item">
+         <h3>🎨 17 Extravi Presets Included</h3>
+         <p>Full support for popular community presets including Clear Day, Soft Cinema, Extravi Cinema, Fantasy, Vibrant, and more.</p>
+       </div>
+       <div class="grid-item">
+         <h3>🔒 Safe Sandbox Isolation</h3>
+         <p>Leaves your installed official Roblox player completely untouched. Prepares an isolated copy in Application Support.</p>
+       </div>
+       <div class="grid-item">
+         <h3>🛡️ Hardened & Protected</h3>
+         <p>Proprietary native Objective-C/Metal host launcher, encrypted string literals, and Mach-O symbol mangling.</p>
+       </div>
+     </div>
+   </section>
 
-  <!-- Highlights Grid -->
-  <section>
-    <h2>✨ Key Architecture & Features</h2>
-    <div class="grid">
-      <div class="grid-item">
-        <h3>⚡ Real Metal Compilation</h3>
-        <p>Translates ReShade FX source directly to SPIR-V, converts to MSL (Metal Shading Language), and executes native Metal raster pipelines.</p>
-      </div>
-      <div class="grid-item">
-        <h3>🎨 17 Extravi Presets Included</h3>
-        <p>Full support for popular community presets including Clear Day, Soft Cinema, Extravi Cinema, Fantasy, Vibrant, and more.</p>
-      </div>
-      <div class="grid-item">
-        <h3>🔒 Safe Sandbox Isolation</h3>
-        <p>Leaves your installed official Roblox player completely untouched. Prepares an isolated copy in Application Support.</p>
-      </div>
-      <div class="grid-item">
-        <h3>🛡️ Hardened & Protected</h3>
-        <p>Proprietary native Objective-C/Metal host launcher, encrypted string literals, and Mach-O symbol mangling.</p>
-      </div>
-    </div>
-  </section>
+   <!-- Troubleshooting -->
+   <section>
+     <h2>🔧 Troubleshooting & Logs</h2>
+     <div class="card">
+       <p>If you encounter issues or want to view diagnostic details:</p>
+       <ul style="margin-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+         <li><strong>Logs location</strong>: Click <strong>"Logs"</strong> in the RoMacShade launcher or view files in <code>~/Library/Logs/MacShade/</code>.</li>
+         <li><strong>Shaders folder</strong>: Click <strong>"Shaders"</strong> in the launcher to drop custom <code>.fx</code> shaders into <code>~/Documents/reshade roblox</code>.</li>
+         <li><strong>Presets folder</strong>: Click <strong>"Presets"</strong> to add community <code>.ini</code> presets.</li>
+       </ul>
+     </div>
+   </section>
 
-  <!-- Troubleshooting -->
-  <section>
-    <h2>🔧 Troubleshooting & Logs</h2>
-    <div class="card">
-      <p>If you encounter issues or want to view diagnostic details:</p>
-      <ul style="margin-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
-        <li><strong>Logs location</strong>: Click <strong>"Logs"</strong> in the MacShade launcher or view files in <code>~/Library/Logs/MacShade/</code>.</li>
-        <li><strong>Shaders folder</strong>: Click <strong>"Shaders"</strong> in the launcher to drop custom <code>.fx</code> shaders into <code>~/Documents/reshade roblox</code>.</li>
-        <li><strong>Presets folder</strong>: Click <strong>"Presets"</strong> to add community <code>.ini</code> presets.</li>
-      </ul>
-    </div>
-  </section>
+   <!-- Footer -->
+   <footer class="footer">
+     <p>RoMacShade v0.0.1 &bull; Copyright &copy; 2026 RoMacShade Authors. All Rights Reserved.</p>
+     <p style="margin-top: 0.25rem;">Built with Apple Metal, SPIRV-Cross, and ReShadeFX.</p>
+   </footer>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <p>MacShade v0.0.1 &bull; Copyright &copy; 2026 MacShade Authors. All Rights Reserved.</p>
-    <p style="margin-top: 0.25rem;">Built with Apple Metal, SPIRV-Cross, and ReShadeFX.</p>
-  </footer>
-
-</div>
+ </div>
 
 </body>
 </html>

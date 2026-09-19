@@ -86,7 +86,7 @@ NSString *Technique(NSDictionary *entry) {
         self.layer.shadowOpacity = 0.55;
         self.layer.shadowOffset = CGSizeMake(0, -2);
         self.layer.shadowRadius = 8.0;
-        self.toolTip = @"MacShade (⌘E) · Drag anywhere to reposition";
+        self.toolTip = @"RoMacShade (⌘E) · Drag anywhere to reposition";
     }
     return self;
 }
@@ -172,7 +172,7 @@ NSString *Technique(NSDictionary *entry) {
     innerRing.lineWidth = 1.0;
     [innerRing stroke];
 
-    NSString *symbol = _isOpen ? @"✕" : @"M";
+    NSString *symbol = _isOpen ? @"✕" : @"R";
     NSFont *font = _isOpen ? [NSFont systemFontOfSize:15 weight:NSFontWeightSemibold]
                            : [NSFont systemFontOfSize:18 weight:NSFontWeightBold];
     NSColor *color = [NSColor colorWithSRGBRed:0.33 green:0.86 blue:0.76 alpha:1.0];
@@ -336,7 +336,7 @@ NSString *Technique(NSDictionary *entry) {
     [_container addSubview:_toggleButton positioned:NSWindowAbove relativeTo:nil];
     [self updateQualityUI];
     [self layoutHostViews];[self refreshEntries];[self refreshControls];
-    [_overlay setStatus:@"MacShade is ready" detail:@"Open an effect or import a preset. ⌘E shows controls; ⌘B toggles effects." busy:NO error:NO];
+    [_overlay setStatus:@"RoMacShade is ready" detail:@"Open an effect or import a preset. ⌘E shows controls; ⌘B toggles effects." busy:NO error:NO];
     SetHostStatus(@"Attached to Metal window");
     NSLog(@"MacShade host: attached window=%ld size=%lux%lu",(long)window.windowNumber,
         (unsigned long)layer.drawableSize.width,(unsigned long)layer.drawableSize.height);
