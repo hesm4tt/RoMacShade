@@ -143,6 +143,18 @@
         return NO;
     }
     
+    // Verify cloned executable integrity before re-signing
+    NSString *destExec = [self bundleExecutablePath:destPath];
+    if (!destExec) {
+        if (error) *error = [NSError errorWithDomain:@"MacShadeSecurity" code:5 userInfo:@{NSLocalizedDescriptionKey: @"Cloned Roblox executable not found"}];
+        return NO;
+    }
+    NSString *preSignHash = [self sha256OfFile:destExec];
+    if (![preSignHash isEqualToString:originalHash]) {
+        if (error) *error = [NSError errorWithDomain:@"MacShadeSecurity" code:5 userInfo:@{NSLocalizedDescriptionKey: @"Executable mismatch after cloning"}];
+        return NO;
+    }
+    
     // Write temporary entitlements plist
     NSString *tempPlist = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"macshade-ent-%d.plist", getpid()]];
     NSData *entData = [NSPropertyListSerialization dataWithPropertyList:modifiedEntitlements format:NSPropertyListXMLFormat_v1_0 options:0 error:error];
@@ -166,10 +178,9 @@
         return NO;
     }
     
-    NSString *destExec = [self bundleExecutablePath:destPath];
     NSString *copyHash = [self sha256OfFile:destExec];
-    if (![copyHash isEqualToString:originalHash]) {
-        if (error) *error = [NSError errorWithDomain:@"MacShadeSecurity" code:8 userInfo:@{NSLocalizedDescriptionKey: @"Executable mismatch after cloning"}];
+    if (!copyHash.length) {
+        if (error) *error = [NSError errorWithDomain:@"MacShadeSecurity" code:8 userInfo:@{NSLocalizedDescriptionKey: @"Could not compute signed executable digest"}];
         return NO;
     }
     
