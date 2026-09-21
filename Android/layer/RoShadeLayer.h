@@ -1,0 +1,29 @@
+//
+// Copyright (c) 2026 RoMacShade / RoAndroidShade Authors.
+// Android Vulkan Interceptor Layer Entry Points and Dispatch Table.
+//
+
+#pragma once
+
+#include "../include/vulkan/vulkan.h"
+#include "../include/vulkan/vk_layer.h"
+
+#ifndef VK_LAYER_EXPORT
+#if defined(_WIN32)
+#define VK_LAYER_EXPORT __declspec(dllexport)
+#else
+#define VK_LAYER_EXPORT __attribute__((visibility("default")))
+#endif
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct);
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *pName);
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *pName);
+
+#ifdef __cplusplus
+}
+#endif

@@ -18,3 +18,9 @@ Logs/
 ._*
 .Spotlight-V100
 .Trashes
+
+# Android build artifacts
+Android/build-*/
+Android/dist/
+*.so
+

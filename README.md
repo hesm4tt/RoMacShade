@@ -52,6 +52,15 @@ You only need to approve RoMacShade once using either of these quick methods:
 
 ---
 
+## 📱 Looking for Android? Introducing RoAndroidShade!
+
+We now support Android through **RoAndroidShade (`VK_LAYER_RoShade`)**, a native Android Vulkan interceptor layer engineered with full 3D depth-buffer capture for SSR, Bloom, and Ambient Occlusion.
+- **🛡️ 100% Safe (No Ban Risk)**: Does not patch, decompile, or repack the Roblox APK, bypassing client signature tamper detection.
+- **🔓 No Root Required**: Operates using standard Android 10+ Vulkan GPU Debug Layer settings configured over ADB.
+- See the complete Android guide and 1-click install scripts in [Android/README.md](Android/README.md).
+
+---
+
 ## Run in Roblox (Command Line / Manual)
 
 Double-click **Launch Roblox with RoMacShade.command** or launch via `RoMacShade.app`. It prepares or reuses a version-specific copy under `~/Library/Application Support/MacShade/Hosts`, starts that copy with the host library, and checks for completed processed frames. The installed `/Applications/Roblox.app` and an already-running official instance remain intact. Allow the first copy operation to finish; logs and a live status JSON are written under `~/Library/Logs/MacShade`.
