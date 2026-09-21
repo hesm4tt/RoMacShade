@@ -69,21 +69,19 @@ fi
 
 # 5. Push layer to device
 echo "==> Pushing RoAndroidShade layer files to device..."
-"$ADB_BIN" shell mkdir -p /data/local/tmp/vulkan/ 2>/dev/null || true
+"$ADB_BIN" shell mkdir -p /data/local/debug/vulkan/ /data/local/tmp/vulkan/ 2>/dev/null || true
+"$ADB_BIN" push "${SO_FILE}" /data/local/debug/vulkan/libVkLayer_RoShade.so
+"$ADB_BIN" push "${JSON_FILE}" /data/local/debug/vulkan/VkLayer_RoShade.json
 "$ADB_BIN" push "${SO_FILE}" /data/local/tmp/vulkan/libVkLayer_RoShade.so
 "$ADB_BIN" push "${JSON_FILE}" /data/local/tmp/vulkan/VkLayer_RoShade.json
-
-# If root is available, also copy to standard debug location
-if "$ADB_BIN" shell "su -c 'mkdir -p /data/local/debug/vulkan && cp /data/local/tmp/vulkan/* /data/local/debug/vulkan/'" 2>/dev/null; then
-    echo "==> [Root Detected] Installed layer into /data/local/debug/vulkan/"
-fi
+"$ADB_BIN" shell chmod 777 /data/local/debug/vulkan/* /data/local/tmp/vulkan/* 2>/dev/null || true
 
 # 6. Configure Android GPU Debug Layer Settings for Roblox
 echo "==> Enabling Vulkan debug layer for Roblox (${ROBLOX_PKG})..."
 "$ADB_BIN" shell settings put global enable_gpu_debug_layers 1
 "$ADB_BIN" shell settings put global gpu_debug_app "${ROBLOX_PKG}"
 "$ADB_BIN" shell settings put global gpu_debug_layers VK_LAYER_RoShade
-"$ADB_BIN" shell settings put global gpu_debug_layer_app "${ROBLOX_PKG}"
+"$ADB_BIN" shell settings delete global gpu_debug_layer_app 2>/dev/null || true
 
 echo "================================================================"
 echo " [SUCCESS] RoAndroidShade activated for Roblox!"
