@@ -23,8 +23,11 @@ elif [ -n "$ANDROID_NDK_ROOT" ] && [ -d "$ANDROID_NDK_ROOT" ]; then
 elif [ -n "$NDK_HOME" ] && [ -d "$NDK_HOME" ]; then
     NDK_PATH="$NDK_HOME"
 else
-    # Check default macOS / Linux locations
+    # Check default macOS (Homebrew / Android Studio) and Linux locations
     CANDIDATES=(
+        "/opt/homebrew/share/android-ndk"
+        "/opt/homebrew/share/android-ndk"*
+        "/opt/homebrew/Caskroom/android-ndk/"*/*/Contents/NDK
         "$HOME/Library/Android/sdk/ndk/"*
         "/usr/local/share/android-ndk"*
         "/opt/android-ndk"*
@@ -77,9 +80,15 @@ cmake -B "${BUILD_DIR}" -S "${ANDROID_ROOT}" \
 echo "==> Building libVkLayer_RoShade.so..."
 cmake --build "${BUILD_DIR}" --config Release -j$(sysctl -n hw.ncpu 2>/dev/null || nproc || echo 4)
 
-# 4. Copy artifacts to dist/
+# 4. Copy artifacts to dist/ and strip symbols for mobile efficiency
 cp "${BUILD_DIR}/libVkLayer_RoShade.so" "${DIST_DIR}/libVkLayer_RoShade.so"
 cp "${ANDROID_ROOT}/layer/VkLayer_RoShade.json" "${DIST_DIR}/VkLayer_RoShade.json"
+
+STRIP_TOOL=$(find "${NDK_PATH}/toolchains/llvm/prebuilt" -name "llvm-strip" 2>/dev/null | head -n 1)
+if [ -n "${STRIP_TOOL}" ] && [ -x "${STRIP_TOOL}" ]; then
+    echo "==> Stripping debug symbols with ${STRIP_TOOL}..."
+    "${STRIP_TOOL}" "${DIST_DIR}/libVkLayer_RoShade.so"
+fi
 
 echo "================================================================"
 echo " [SUCCESS] RoAndroidShade built successfully!"
