@@ -64,7 +64,15 @@ if [ ! -f "${TOOLCHAIN_FILE}" ]; then
     exit 1
 fi
 
-# 2. Configure with CMake
+# 2. Compile Shaders
+GLSLC_BIN=$(find "${NDK_PATH}" "/opt/homebrew/Caskroom/android-ndk" -name "glslc" 2>/dev/null | head -n 1)
+if [ -n "${GLSLC_BIN}" ] && [ -x "${GLSLC_BIN}" ]; then
+    echo "==> Compiling Vulkan shaders with ${GLSLC_BIN}..."
+    "${GLSLC_BIN}" -mfmt=c "${ANDROID_ROOT}/layer/shaders/postprocess.vert" -o "${ANDROID_ROOT}/layer/shaders/vert_spv.inc"
+    "${GLSLC_BIN}" -mfmt=c "${ANDROID_ROOT}/layer/shaders/postprocess.frag" -o "${ANDROID_ROOT}/layer/shaders/frag_spv.inc"
+fi
+
+# 3. Configure with CMake
 mkdir -p "${BUILD_DIR}"
 mkdir -p "${DIST_DIR}"
 
