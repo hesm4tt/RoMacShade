@@ -614,7 +614,7 @@ struct FXResourceState {
         NSMutableDictionary *entry=[@{@"name":S(u.name),@"type":S(u.type.description()),@"components":@(u.type.components()),
             @"values":UniformValues(u,_uniformData),@"defaultValues":UniformValues(u,_program.defaultUniformData),
             @"source":S(Annotation(u.annotations,"source")),@"uiLabel":label.length?label:S(u.name),
-            @"uiTooltip":S(Annotation(u.annotations,"ui_tooltip")),@"uiType":S(Annotation(u.annotations,"ui_type")),
+            @"uiTooltip":S(Annotation(u.annotations,"ui_tooltip")),@"uiCategory":S(Annotation(u.annotations,"ui_category")),@"uiType":S(Annotation(u.annotations,"ui_type")),
             @"uiItems":UIItems(u.annotations)} mutableCopy];
         for(const auto &names:{std::pair<const char *,NSString *>{"ui_min",@"uiMin"},{"ui_max",@"uiMax"},{"ui_step",@"uiStep"}}) {
             id value=NumericAnnotation(u.annotations,names.first);if(value)entry[names.second]=value;

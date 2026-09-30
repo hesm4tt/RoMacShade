@@ -54,10 +54,26 @@ fragment float captureDepthMSFragment(DepthVertex in [[stage_in]],
 }
 }
 
+@interface MSDepthResourceSet : NSObject
+@property(nonatomic, strong) id<MTLTexture> depthCopy;
+@property(nonatomic, strong) id<MTLTexture> output;
+@property(nonatomic) NSUInteger sourceWidth;
+@property(nonatomic) NSUInteger sourceHeight;
+@property(nonatomic) NSUInteger outputWidth;
+@property(nonatomic) NSUInteger outputHeight;
+@property(nonatomic) NSUInteger sampleCount;
+@property(nonatomic) MTLPixelFormat sourceFormat;
+@property(nonatomic) MTLTextureType sourceType;
+@property(nonatomic) BOOL inUse;
+@end
+@implementation MSDepthResourceSet
+@end
+
 @implementation MSDepthConverter {
     id<MTLDevice> _device;
     id<MTLRenderPipelineState> _singlePipeline;
     id<MTLRenderPipelineState> _msaaPipeline;
+    NSMutableArray<MSDepthResourceSet *> *_resourceSets;
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device error:(NSError **)error {
@@ -68,6 +84,7 @@ fragment float captureDepthMSFragment(DepthVertex in [[stage_in]],
         return nil;
     }
     _device = device;
+    _resourceSets = [NSMutableArray array];
     MTLCompileOptions *options = [MTLCompileOptions new];
     options.fastMathEnabled = NO;
     id<MTLLibrary> library = [device newLibraryWithSource:DepthSource() options:options error:error];
@@ -90,6 +107,93 @@ fragment float captureDepthMSFragment(DepthVertex in [[stage_in]],
     _msaaPipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:error];
     if (!_msaaPipeline) return nil;
     return self;
+}
+
+- (MSDepthResourceSet *)acquireResourcesForSource:(id<MTLTexture>)source
+                                      outputWidth:(NSUInteger)width
+                                     outputHeight:(NSUInteger)height
+                                            error:(NSError **)error {
+    @synchronized(self) {
+        MSDepthResourceSet *slot = nil;
+        for (MSDepthResourceSet *candidate in _resourceSets) {
+            BOOL matches = candidate.sourceWidth == source.width && candidate.sourceHeight == source.height &&
+                candidate.sampleCount == source.sampleCount && candidate.sourceFormat == source.pixelFormat &&
+                candidate.sourceType == source.textureType;
+            if (!candidate.inUse && matches) { slot = candidate; break; }
+        }
+
+        BOOL isNewSlot = NO;
+        if (!slot) {
+            for (MSDepthResourceSet *candidate in _resourceSets) {
+                if (!candidate.inUse) { slot = candidate; break; }
+            }
+        }
+        if (!slot && _resourceSets.count < 3) {
+            slot = [MSDepthResourceSet new];
+            [_resourceSets addObject:slot];
+            isNewSlot = YES;
+        }
+        if (!slot) {
+            SetError(error, 14, @"Depth buffers are still in flight; skipping depth capture for this frame.");
+            return nil;
+        }
+
+        BOOL matches = slot.sourceWidth == source.width && slot.sourceHeight == source.height &&
+            slot.sampleCount == source.sampleCount && slot.sourceFormat == source.pixelFormat &&
+            slot.sourceType == source.textureType;
+        if (!matches) {
+            MTLTextureDescriptor *copyDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:source.pixelFormat
+                                                                                                  width:source.width height:source.height mipmapped:NO];
+            if (source.sampleCount > 1) {
+                copyDescriptor.textureType = MTLTextureType2DMultisample;
+                copyDescriptor.sampleCount = source.sampleCount;
+            }
+            copyDescriptor.storageMode = MTLStorageModePrivate;
+            copyDescriptor.usage = MTLTextureUsageShaderRead;
+            id<MTLTexture> depthCopy = [_device newTextureWithDescriptor:copyDescriptor];
+
+            if (!depthCopy) {
+                if (isNewSlot) [_resourceSets removeObjectIdenticalTo:slot];
+                SetError(error, 11, @"Metal could not allocate the depth copy texture.");
+                return nil;
+            }
+            depthCopy.label = @"MacShade stored depth snapshot";
+            slot.depthCopy = depthCopy;
+            slot.sourceWidth = source.width;
+            slot.sourceHeight = source.height;
+            slot.sampleCount = source.sampleCount;
+            slot.sourceFormat = source.pixelFormat;
+            slot.sourceType = source.textureType;
+        }
+        // Each normalized output is an immutable depth snapshot referenced by
+        // candidate records for up to two seconds. Reuse would let a later
+        // capture overwrite depth while another command buffer still samples it.
+        MTLTextureDescriptor *outputDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatR32Float
+                                                                                                width:width height:height mipmapped:NO];
+        outputDescriptor.storageMode = MTLStorageModePrivate;
+        outputDescriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
+        id<MTLTexture> output = [_device newTextureWithDescriptor:outputDescriptor];
+        if (!output) {
+            if (isNewSlot) [_resourceSets removeObject:slot];
+            SetError(error, 11, @"Metal could not allocate the normalized depth snapshot.");
+            return nil;
+        }
+        output.label = @"MacShade forward ReShade depth";
+        slot.output = output;
+        slot.outputWidth = width;
+        slot.outputHeight = height;
+        slot.inUse = YES;
+        return slot;
+    }
+}
+
+- (void)releaseResources:(MSDepthResourceSet *)resources {
+    @synchronized(self) {
+        resources.inUse = NO;
+        resources.output = nil;
+        resources.outputWidth = 0;
+        resources.outputHeight = 0;
+    }
 }
 
 - (id<MTLTexture>)encodeCommandBuffer:(id<MTLCommandBuffer>)buffer
@@ -136,32 +240,17 @@ fragment float captureDepthMSFragment(DepthVertex in [[stage_in]],
         return nil;
     }
 
-    MTLTextureDescriptor *copyDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:source.pixelFormat
-                                                                                          width:source.width height:source.height mipmapped:NO];
-    if (source.sampleCount > 1) {
-        copyDescriptor.textureType = MTLTextureType2DMultisample;
-        copyDescriptor.sampleCount = source.sampleCount;
-    }
-    copyDescriptor.storageMode = MTLStorageModePrivate;
-    copyDescriptor.usage = MTLTextureUsageShaderRead;
-    id<MTLTexture> depthCopy = [_device newTextureWithDescriptor:copyDescriptor];
-    MTLTextureDescriptor *outputDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatR32Float
-                                                                                            width:width height:height mipmapped:NO];
-    outputDescriptor.storageMode = MTLStorageModePrivate;
-    outputDescriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
-    id<MTLTexture> output = [_device newTextureWithDescriptor:outputDescriptor];
-    if (!depthCopy || !output) {
-        SetError(error, 11, @"Metal could not allocate depth conversion textures. Reduce the output dimensions or GPU memory use.");
-        return nil;
-    }
-    depthCopy.label = @"MacShade stored depth snapshot";
-    output.label = @"MacShade forward ReShade depth";
+    MSDepthResourceSet *resources = [self acquireResourcesForSource:source outputWidth:width outputHeight:height error:error];
+    if (!resources) return nil;
+    id<MTLTexture> depthCopy = resources.depthCopy;
+    id<MTLTexture> output = resources.output;
     id<MTLRenderPipelineState> activePipeline = (source.sampleCount > 1) ? _msaaPipeline : _singlePipeline;
     // Install the keepalive before encoding any work, including failure paths.
-    NSArray *keepalive = @[self, source, depthCopy, output, activePipeline];
+    NSArray *keepalive = @[self, source, resources, depthCopy, output, activePipeline];
     [buffer addCompletedHandler:^(id<MTLCommandBuffer> completed) {
         (void)completed;
         (void)keepalive.count;
+        [self releaseResources:resources];
     }];
     id<MTLBlitCommandEncoder> blit = [buffer blitCommandEncoder];
     if (!blit) {

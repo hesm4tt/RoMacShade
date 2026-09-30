@@ -76,7 +76,11 @@ FXEntryPoint TranslateEntry(const std::vector<uint32_t> &spirv,
         throw std::runtime_error("This entry point exceeds MacShade's 16 sampled-texture limit: " + entry.first);
 
     spirv_cross::CompilerMSL::Options mslOptions;
+#if defined(MACSHADE_IOS)
+    mslOptions.platform = spirv_cross::CompilerMSL::Options::iOS;
+#else
     mslOptions.platform = spirv_cross::CompilerMSL::Options::macOS;
+#endif
     mslOptions.set_msl_version(2, 3);
     mslOptions.argument_buffers = false;
     mslOptions.pad_fragment_output_components = true;

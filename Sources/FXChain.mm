@@ -121,6 +121,7 @@ NSArray<NSDictionary *> *MSFXPresetSpecifications(MSFXPreset *preset, NSURL *pre
         NSString *file = FileKey(entry[@"file"] ?: @"");
         NSString *technique = entry[@"technique"];
         BOOL enabled = [entry[@"enabled"] boolValue];
+        BOOL adaptedPPFXBloom = NO;
         // ReShade stores shader basenames. Only resolve in the selected library or
         // adjacent preset directory; do not use arbitrary paths from INI content.
         NSMutableArray<NSURL *> *matches = [NSMutableArray array];
@@ -132,6 +133,19 @@ NSArray<NSDictionary *> *MSFXPresetSpecifications(MSFXPreset *preset, NSURL *pre
             if (!matches.count) for (NSDictionary *item in library) {
                 NSURL *url = item[@"url"];
                 if ([url.lastPathComponent caseInsensitiveCompare:file] == NSOrderedSame) [matches addObject:url];
+            }
+            // The supplied Extravi presets target PPFX_Bloom.fx, which is not
+            // part of the bundled shader set. Route that enabled entry to the
+            // equivalent bundled qUINT bloom technique; unrelated INI imports
+            // and all other shader references keep their normal resolution.
+            if (!matches.count && enabled && [file caseInsensitiveCompare:@"PPFX_Bloom.fx"] == NSOrderedSame &&
+                [technique caseInsensitiveCompare:@"PPFXBloom"] == NSOrderedSame) {
+                for (NSDictionary *item in library) {
+                    NSURL *url = item[@"url"];
+                    if ([url.lastPathComponent caseInsensitiveCompare:@"qUINT_bloom.fx"] == NSOrderedSame)
+                        [matches addObject:url];
+                }
+                if (matches.count == 1) { file = @"qUINT_bloom.fx"; technique = @"Bloom"; adaptedPPFXBloom = YES; }
             }
         } else {
             // Legacy presets have no file qualification. Infer only from a unique
@@ -145,7 +159,7 @@ NSArray<NSDictionary *> *MSFXPresetSpecifications(MSFXPreset *preset, NSURL *pre
         if (matches.count != 1) {
             NSString *message = matches.count ? [NSString stringWithFormat:@"%@ matches multiple shader files. Keep one matching shader in the selected folders.",file.length ? file : technique]
                 : [NSString stringWithFormat:@"Missing shader for %@. Add its effects folder, then import the preset again.",file.length ? file : technique];
-            if (!enabled) { [warnings addObject:[@"Skipped disabled technique: " stringByAppendingString:message]]; continue; }
+            if (!enabled) continue;
             if (matches.count == 0) { [warnings addObject:[@"Skipped unavailable effect: " stringByAppendingString:message]]; continue; }
             ChainError(error,message); return nil;
         }
@@ -153,7 +167,16 @@ NSArray<NSDictionary *> *MSFXPresetSpecifications(MSFXPreset *preset, NSURL *pre
         NSString *section = nil;
         for (NSString *key in preset.uniformValues)
             if ([FileKey(key) caseInsensitiveCompare:url.lastPathComponent] == NSOrderedSame) { section = key; break; }
-        NSDictionary *values = section ? preset.uniformValues[section] : @{};
+        NSMutableDictionary *values = section ? [preset.uniformValues[section] mutableCopy] : [NSMutableDictionary dictionary];
+        if (adaptedPPFXBloom) {
+            NSDictionary *legacyValues = nil;
+            for (NSString *key in preset.uniformValues)
+                if ([FileKey(key) caseInsensitiveCompare:@"PPFX_Bloom.fx"] == NSOrderedSame) { legacyValues = preset.uniformValues[key]; break; }
+            NSDictionary *uniformMap = @{@"pBloomIntensity":@"BLOOM_INTENSITY",
+                @"pBloomCurve":@"BLOOM_CURVE", @"pBloomSaturation":@"BLOOM_SAT"};
+            for (NSString *source in uniformMap) if (legacyValues[source]) values[uniformMap[source]] = legacyValues[source];
+            if (warnings) [warnings addObject:@"Adapted PPFXBloom to bundled qUINT bloom. Intensity, curve, and saturation were mapped; other PPFX-only controls use qUINT defaults."];
+        }
         NSMutableDictionary *definitions = [preset.definitions mutableCopy];
         for (NSString *key in preset.effectDefinitions)
             if ([FileKey(key) caseInsensitiveCompare:url.lastPathComponent] == NSOrderedSame)
@@ -164,7 +187,7 @@ NSArray<NSDictionary *> *MSFXPresetSpecifications(MSFXPreset *preset, NSURL *pre
             [warnings addObject:@"Depth convention adapted to MacShade's forward depth input. Use Reversed Depth Input for a host that supplies reversed depth."];
         }
         [specs addObject:@{@"url":url, @"technique":technique, @"enabled":@(enabled),
-            @"values":values ?: @{}, @"definitions":definitions, @"strictValues":@NO}];
+            @"values":[values copy] ?: @{}, @"definitions":definitions, @"strictValues":@NO}];
     }
     if (specs.count == 0) {
         NSUInteger enabledCount = 0;

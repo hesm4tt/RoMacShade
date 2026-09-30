@@ -1,5 +1,5 @@
 #import <Foundation/Foundation.h>
-#import "FXPreset.h"
+#import "FXChain.h"
 #include <cmath>
 #include <cstdio>
 
@@ -87,6 +87,46 @@ int main(void) {
             MSFXPreset *extravi = [MSFXPreset presetWithURL:extraviURL error:&error];
             Check(extravi != nil && extravi.entries.count > 0, @"Extravi preset with leading comma in PreprocessorDefinitions parses cleanly");
         }
+        NSURL *extraviDirectory = [NSURL fileURLWithPath:@"Presets/Extravi" isDirectory:YES];
+        NSArray<NSURL *> *extraviFiles = [[NSFileManager.defaultManager contentsOfDirectoryAtURL:extraviDirectory
+            includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles error:nil] filteredArrayUsingPredicate:
+                [NSPredicate predicateWithBlock:^BOOL(NSURL *url, __unused NSDictionary *bindings) { return [url.pathExtension.lowercaseString isEqual:@"ini"]; }]];
+        NSUInteger parsedExtravi = 0;
+        for (NSURL *url in extraviFiles) {
+            NSError *presetError = nil;
+            if ([MSFXPreset presetWithURL:url error:&presetError]) ++parsedExtravi;
+            else fprintf(stderr, "Extravi preset parse failed (%s): %s\n", url.lastPathComponent.UTF8String, presetError.localizedDescription.UTF8String);
+        }
+        Check(extraviFiles.count == 17 && parsedExtravi == 17, @"All 17 bundled Extravi presets parse from the source collection");
+        NSMutableArray<NSDictionary *> *library = [NSMutableArray array];
+        NSDirectoryEnumerator *shaderFiles = [NSFileManager.defaultManager enumeratorAtURL:
+            [NSURL fileURLWithPath:@"Effects" isDirectory:YES] includingPropertiesForKeys:nil
+            options:NSDirectoryEnumerationSkipsHiddenFiles errorHandler:nil];
+        for (NSURL *url in shaderFiles) if ([url.pathExtension.lowercaseString isEqual:@"fx"])
+            [library addObject:@{@"url":url, @"name":url.lastPathComponent.stringByDeletingPathExtension}];
+        NSUInteger resolvedExtravi = 0, adaptedBloom = 0, mappedBloomValues = 0, missingActive = 0;
+        for (NSURL *url in extraviFiles) {
+            NSError *presetError = nil; NSMutableArray<NSString *> *warnings = [NSMutableArray array];
+            MSFXPreset *extravi = [MSFXPreset presetWithURL:url error:&presetError];
+            NSArray<NSDictionary *> *specs = extravi ? MSFXPresetSpecifications(extravi, url, library, warnings, &presetError) : nil;
+            if (!specs) { fprintf(stderr, "Extravi preset resolution failed (%s): %s\n", url.lastPathComponent.UTF8String, presetError.localizedDescription.UTF8String); continue; }
+            ++resolvedExtravi; BOOL hasActive = NO;
+            for (NSDictionary *spec in specs) {
+                if (![spec[@"enabled"] boolValue]) continue;
+                hasActive = YES;
+                if ([[spec[@"url"] lastPathComponent] isEqual:@"qUINT_bloom.fx"] && [spec[@"technique"] isEqual:@"Bloom"]) {
+                    ++adaptedBloom;
+                    NSDictionary *values = spec[@"values"];
+                    if ([values[@"BLOOM_INTENSITY"][0] doubleValue] == 0.1 &&
+                        [values[@"BLOOM_CURVE"][0] doubleValue] == 1.5 &&
+                        [values[@"BLOOM_SAT"][0] doubleValue] == 2.0) ++mappedBloomValues;
+                }
+            }
+            if (!hasActive) ++missingActive;
+            for (NSString *warning in warnings) if ([warning hasPrefix:@"Skipped unavailable effect:"]) ++missingActive;
+        }
+        Check(resolvedExtravi == 17 && missingActive == 0, @"Every Extravi preset resolves its enabled shaders from the bundled library");
+        Check(adaptedBloom == 9 && mappedBloomValues == 9, @"Nine PPFX bloom presets map to qUINT and retain intensity, curve, and saturation");
         printf("Preset tests: %lu checks, %lu failures\n", (unsigned long)checks, (unsigned long)failures);
     }
     return failures ? 1 : 0;

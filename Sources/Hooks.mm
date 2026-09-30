@@ -62,6 +62,9 @@ struct State {
     std::atomic<uint64_t> fxFrames{0};
     std::atomic<uint64_t> depthFrames{0};
     std::atomic<bool> depthReversed{false};
+    std::atomic<bool> depthRequired{false};
+    std::atomic<NSUInteger> fxWidth{0};
+    std::atomic<NSUInteger> fxHeight{0};
     NSString *__strong depthStatus = @"Waiting for a compatible scene depth buffer";
     NSArray<MSFXEffect *> *__strong effects = @[];
 };
@@ -74,7 +77,9 @@ char captureInProgressKey;
 char drawableTextureKey;
 
 std::mutex &globalDepthLock() { static std::mutex lock; return lock; }
-constexpr size_t kGlobalDepthCapacity = 32;
+// Keep only the most recent candidates; each entry owns an immutable depth
+// snapshot, so a large ring would retain many full-size GPU textures.
+constexpr size_t kGlobalDepthCapacity = 8;
 MSDepthCandidate *__strong globalDepthRing[kGlobalDepthCapacity] = {};
 uint64_t globalDepthSequence = 0;
 size_t globalDepthWriteIndex = 0;
@@ -204,8 +209,14 @@ void captureDepth(NSDictionary *record) {
     NSError *error = nil;
     MSDepthConverter *converter = converterForDevice(buffer.device,&error);
     const BOOL reversed = MSIsDepthReversed();
+    NSUInteger outputWidth = state().fxWidth.load(std::memory_order_relaxed);
+    NSUInteger outputHeight = state().fxHeight.load(std::memory_order_relaxed);
+    if (!outputWidth || !outputHeight) {
+        outputWidth = source.width;
+        outputHeight = source.height;
+    }
     id<MTLTexture> snapshot = [converter encodeCommandBuffer:buffer depthTexture:source
-        outputWidth:source.width outputHeight:source.height reversed:reversed
+        outputWidth:outputWidth outputHeight:outputHeight reversed:reversed
         nearPlane:1.0 farPlane:1000.0 error:&error];
     objc_setAssociatedObject(buffer,&captureInProgressKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     if (!snapshot) { depthStatus(error.localizedDescription ?: @"Could not capture scene depth"); return; }
@@ -371,8 +382,7 @@ void process(id<MTLCommandBuffer> buffer) {
         if (effects.count > 0) {
             const double seconds = CACurrentMediaTime()-started;
             BOOL succeeded = NO;
-            BOOL needsDepth = NO;
-            for (MSFXEffect *effect in effects) if (effect.requiresDepth) needsDepth=YES;
+            BOOL needsDepth = state().depthRequired.load(std::memory_order_relaxed);
             id<MTLTexture> depth = needsDepth ? depthForDrawable(buffer,drawable.texture) : nil;
 
             const NSUInteger effW = effects[0].width;
@@ -433,8 +443,11 @@ void replace(Class cls, SEL selector, IMP imp) {
 static BOOL isDepthPixelFormat(MTLPixelFormat format) {
     return format == MTLPixelFormatDepth32Float ||
            format == MTLPixelFormatDepth16Unorm ||
-           format == MTLPixelFormatDepth32Float_Stencil8 ||
-           format == MTLPixelFormatDepth24Unorm_Stencil8;
+           format == MTLPixelFormatDepth32Float_Stencil8
+#if !defined(MACSHADE_IOS)
+           || format == MTLPixelFormatDepth24Unorm_Stencil8
+#endif
+           ;
 }
 
 static BOOL isRobloxHost(void) {
@@ -543,12 +556,13 @@ BOOL install(NSError **error) {
                 if (drawable) {
                     remember(receiver, drawable);
                     state().renderTargetMatches.fetch_add(1, std::memory_order_relaxed);
+                    break;
                 }
             }
         }
-        BOOL needsDepth=NO;
-        if (MSIsEnabled() && !objc_getAssociatedObject(receiver,&processingKey) && !objc_getAssociatedObject(receiver,&captureInProgressKey))
-            for (MSFXEffect *effect in MSGetFXEffects()) if (effect.requiresDepth) { needsDepth=YES; break; }
+        BOOL needsDepth = MSIsEnabled() && state().depthRequired.load(std::memory_order_relaxed) &&
+            !objc_getAssociatedObject(receiver,&processingKey) &&
+            !objc_getAssociatedObject(receiver,&captureInProgressKey);
         id<MTLTexture> depth=descriptor.depthAttachment.texture, color=descriptor.colorAttachments[0].texture;
         NSUInteger dw = gObservedDrawableWidth.load(std::memory_order_relaxed);
         NSUInteger dh = gObservedDrawableHeight.load(std::memory_order_relaxed);
@@ -622,9 +636,11 @@ BOOL install(NSError **error) {
         return drawable;
     }));
     hookDeviceClass(object_getClass(device));
+#if !defined(MACSHADE_IOS)
     for (id<MTLDevice> d in MTLCopyAllDevices()) {
         hookDeviceClass(object_getClass(d));
     }
+#endif
     if (isRobloxHost()) {
         state().depthReversed.store(true, std::memory_order_relaxed);
         NSLog(@"MacShade: detected Roblox host, defaulting reversed depth input to YES");
@@ -662,7 +678,9 @@ uint64_t MSGPUErrorCount(void) { return state().gpuErrors.load(std::memory_order
 NSDictionary<NSString *, NSNumber *> *MSHookDiagnostics(void) {
     return @{@"acquiredDrawables": @(state().acquiredDrawables.load(std::memory_order_relaxed)),
              @"committedBuffers": @(state().committedBuffers.load(std::memory_order_relaxed)),
-             @"renderTargetMatches": @(state().renderTargetMatches.load(std::memory_order_relaxed))};
+             @"renderTargetMatches": @(state().renderTargetMatches.load(std::memory_order_relaxed)),
+             @"drawableWidth": @(gObservedDrawableWidth.load(std::memory_order_relaxed)),
+             @"drawableHeight": @(gObservedDrawableHeight.load(std::memory_order_relaxed))};
 }
 void MSSetFXEffect(MSFXEffect *effect) {
     MSSetFXEffects(effect ? @[effect] : @[]);
@@ -672,6 +690,13 @@ MSFXEffect *MSGetFXEffect(void) {
 }
 void MSSetFXEffects(NSArray<MSFXEffect *> *effects) {
     NSArray<MSFXEffect *> *snapshot = [effects copy] ?: @[];
+    BOOL needsDepth = NO;
+    for (MSFXEffect *effect in snapshot) if (effect.requiresDepth) { needsDepth = YES; break; }
+    NSUInteger width = snapshot.firstObject.width;
+    NSUInteger height = snapshot.firstObject.height;
+    state().depthRequired.store(needsDepth, std::memory_order_relaxed);
+    state().fxWidth.store(width, std::memory_order_relaxed);
+    state().fxHeight.store(height, std::memory_order_relaxed);
     std::lock_guard<std::mutex> lock(state().settingsLock);
     state().effects = snapshot;
 }

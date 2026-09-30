@@ -59,6 +59,9 @@ We now support Android through **RoAndroidShade (`VK_LAYER_RoShade`)**, a native
 - **🔓 No Root Required**: Operates using standard Android 10+ Vulkan GPU Debug Layer settings configured over ADB.
 - See the complete Android guide and 1-click install scripts in [Android/README.md](Android/README.md).
 
+The repository also builds a source-based iOS/iPadOS dylib with a UIKit shader
+menu and bundled ReShade effects. See [the iOS build and LiveContainer guide](docs/IOS_TESTING.md).
+
 ---
 
 ## Run in Roblox (Command Line / Manual)
