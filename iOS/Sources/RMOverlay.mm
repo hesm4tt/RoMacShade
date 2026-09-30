@@ -34,6 +34,11 @@ static UIStackView *RMRow(NSArray<UIView *> *views) {
 static void RMHeight(UIView *view, CGFloat height) {
     [view.heightAnchor constraintEqualToConstant:height].active = YES;
 }
+static NSUInteger RMEffectDimension(NSUInteger drawableDimension, CGFloat scale) {
+    double scaled = std::round((double)drawableDimension * (double)scale);
+    NSUInteger pixels = scaled > 0 ? (NSUInteger)scaled : 0;
+    return std::max<NSUInteger>(2, pixels & ~(NSUInteger)1);
+}
 static NSString *RMEntryTitle(NSDictionary *entry) {
     MSFXEffect *effect = entry[@"effect"];
     return [NSString stringWithFormat:@"%@ · %@", [entry[@"url"] lastPathComponent],
@@ -425,8 +430,8 @@ static NSString *RMEntryTitle(NSDictionary *entry) {
     NSUInteger drawableWidth = [diagnostics[@"drawableWidth"] unsignedIntegerValue];
     NSUInteger drawableHeight = [diagnostics[@"drawableHeight"] unsignedIntegerValue];
     if (!drawableWidth || !drawableHeight) { self.busy = NO; [self render]; [self message:@"Preset queued. Enter a 3D experience to apply it."]; return; }
-    NSUInteger width = std::max<NSUInteger>(2, ((NSUInteger)std::round((double)drawableWidth * self.renderScale)) & ~(NSUInteger)1);
-    NSUInteger height = std::max<NSUInteger>(2, ((NSUInteger)std::round((double)drawableHeight * self.renderScale)) & ~(NSUInteger)1);
+    NSUInteger width = RMEffectDimension(drawableWidth, self.renderScale);
+    NSUInteger height = RMEffectDimension(drawableHeight, self.renderScale);
     self.pendingSpecs = nil;
     self.busy = YES; [self message:@"Compiling effects…"]; [self render];
     NSArray *includes = [self includeDirectories]; NSArray *snapshot = [specs copy];
@@ -492,7 +497,9 @@ static NSString *RMEntryTitle(NSDictionary *entry) {
 - (void)renderScaleChanged:(UISegmentedControl *)control {
     static const CGFloat scales[] = {1.0, 0.75, 0.5};
     NSInteger index = MAX(0, MIN(control.selectedSegmentIndex, 2));
-    self.renderScale = scales[index];
+    CGFloat selectedScale = scales[index];
+    if (std::abs((double)self.renderScale - (double)selectedScale) < 0.001) return;
+    self.renderScale = selectedScale;
     [NSUserDefaults.standardUserDefaults setDouble:self.renderScale forKey:@"RoMacShadeRenderScale"];
     if (!self.entries.count) {
         [self message:[NSString stringWithFormat:@"Render size set to %ld%%. Enable an effect to apply it.", (long)std::lround(self.renderScale * 100.0)]];
@@ -595,7 +602,9 @@ static NSString *RMEntryTitle(NSDictionary *entry) {
     if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
     NSDictionary *stats = MSHookDiagnostics(); NSUInteger w = [stats[@"drawableWidth"] unsignedIntegerValue], h = [stats[@"drawableHeight"] unsignedIntegerValue];
     if (self.pendingSpecs && self.libraryRoot && w && h && !self.busy) [self compile:self.pendingSpecs];
-    else if (self.entries.count && w && h && !self.busy && (w != self.compiledWidth || h != self.compiledHeight))
+    else if (self.entries.count && w && h && !self.busy &&
+        (RMEffectDimension(w, self.renderScale) != self.compiledWidth ||
+         RMEffectDimension(h, self.renderScale) != self.compiledHeight))
         [self compile:MSFXChainSpecifications(self.entries)];
     if (self.view.window.isKeyWindow && !self.presentedViewController && !self.search.searchTextField.isFirstResponder)
         [self.hostWindow makeKeyWindow];
