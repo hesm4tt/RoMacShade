@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sideloading resources and the documented LiveContainer setup for the RoMacShade iOS tweak.">
+  <meta name="theme-color" content="#101314">
+  <title>Install on iOS &amp; iPadOS — RoMacShade</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header"><div class="wrap header-inner">
+    <a class="brand" href="../" aria-label="RoMacShade home"><span class="brand-mark" aria-hidden="true">RM</span>RoMacShade</a>
+    <nav aria-label="Main navigation"><a href="macos.html">macOS</a><a href="ios.html" aria-current="page">iOS &amp; iPadOS</a><a href="https://github.com/hesm4tt/RoMacShade/releases">Releases</a><a href="https://github.com/hesm4tt/RoMacShade">Source</a></nav>
+  </div></header>
+  <main id="main" class="wrap">
+    <header class="page-hero"><span class="eyebrow">Installation guide</span><h1>iOS &amp; iPadOS</h1><p>RoMacShade is distributed as an arm64 tweak dylib. The supported walkthrough below uses LiveContainer; other sideloading tools are linked as general resources, with compatibility depending on their current capabilities.</p><a class="button primary" href="https://github.com/hesm4tt/RoMacShade/releases/download/ios-v0.1.1/RoMacShade.dylib">Download iOS v0.1.1 preview</a></header>
+    <article class="guide">
+      <section><h2>Before you start</h2><ul>
+        <li>Use an iPhone or iPad and a compatible arm64 app environment.</li>
+        <li>Obtain the base app IPA through your own Apple account and follow the chosen sideloading tool's current instructions.</li>
+        <li>The current iOS release is a prerelease. The tested setup uses LiveContainer's per-app tweak support and signing flow.</li>
+      </ul><div class="callout"><strong>Use official downloads.</strong> For each sideloading tool, follow its linked project documentation and check the current device and iOS requirements before installing.</div></section>
+      <section><h2>LiveContainer setup</h2><ol>
+        <li>Install and configure LiveContainer using its <a href="https://livecontainer.github.io/docs/installation">official installation guide</a>.</li>
+        <li>Import your own Roblox IPA into LiveContainer as described by its guide.</li>
+        <li>Download <a href="https://github.com/hesm4tt/RoMacShade/releases/download/ios-v0.1.1/RoMacShade.dylib">RoMacShade.dylib</a> and import it into that app's per-app Tweaks folder.</li>
+        <li>In LiveContainer, open <strong>Tweaks → Sign</strong> and wait for signing to finish.</li>
+        <li>Launch the app, enter a 3D experience, and open the floating RoMacShade control to select effects or presets.</li>
+      </ol><p>If loading reports <code>code signature invalid</code>, use LiveContainer's Tweaks → Sign flow and relaunch. Follow the current <a href="https://livecontainer.github.io/docs/guides/tweaks">LiveContainer tweak guide</a> if its interface changes.</p><div class="callout warning"><strong>Installer compatibility:</strong> LiveContainer's guide currently lists some installation approaches as unsupported. Check its official installation page for the current status before choosing an installer.</div></section>
+      <section><h2>Other sideloading resources</h2><p>These are links to the projects' own documentation. RoMacShade does not guarantee that every tool supports loading a tweak into another app.</p>
+        <ul class="link-list">
+          <li><a href="https://docs.sidestore.io/">SideStore<span>Official documentation</span></a></li>
+          <li><a href="https://sideinstaller.net/">SideInstaller<span>Official project website</span></a></li>
+          <li><a href="https://github.com/FrizzleM/SideInstaller">SideInstaller source<span>Official GitHub repository</span></a></li>
+          <li><a href="https://faq.altstore.io/">AltStore<span>Official FAQ and guides</span></a></li>
+          <li><a href="https://sideloadly.io/">Sideloadly<span>Official website and guide</span></a></li>
+          <li><a href="https://livecontainer.github.io/docs/installation">LiveContainer<span>Official documentation</span></a></li>
+        </ul><p>For SideInstaller, use the <code>sideinstaller.net</code> project domain or its linked GitHub repository.</p></section>
+      <section><h2>Using an IPA outside LiveContainer</h2><p>This project documents loading the tweak through LiveContainer. We do not provide instructions for injecting RoMacShade into, modifying, or re-signing Roblox's IPA. For apps you own or are authorized to modify, use Apple's supported development and code-signing tools and the app author's integration guidance.</p></section>
+      <section><h2>Effects and presets</h2><p>The iOS binary includes its bundled effects and presets for offline use. Browse the separate <a href="https://github.com/hesm4tt/RoMacShade-Effects">RoMacShade Effects library</a> for release assets and library notes. Some ReShade effects may exceed the iOS runtime's supported features.</p></section>
+    </article>
+  </main>
+  <footer class="site-footer"><div class="wrap footer-inner"><p>RoMacShade is independent and is not affiliated with Roblox Corporation or Apple.</p><div class="footer-links"><a href="../">Home</a><a href="https://github.com/hesm4tt/RoMacShade/releases">Releases</a></div></div></footer>
+</body>
+</html>
